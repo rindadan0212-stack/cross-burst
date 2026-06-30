@@ -124,33 +124,67 @@ const leaderSkills = {
   },
 };
 
-const relicDefinitions = {
-  syncLens: {
-    label: "同期レンズ",
-    syncWindowBonusMs: 16,
-    syncMultiplier: 1.08,
-  },
-  burstCore: {
-    label: "バースト核",
-    burstGainMultiplier: 1.18,
-  },
-  breakBrand: {
-    label: "崩牙の刻印",
-    breakDamageMultiplier: 1.25,
-  },
-  aegisCharm: {
-    label: "守護の護符",
-    damageTakenMultiplier: 0.92,
-  },
-  relicBlade: {
-    label: "遺剣",
-    damageMultiplier: 1.08,
-  },
-  mercyBell: {
-    label: "慈愛の鈴",
-    healingMultiplier: 1.18,
-  },
+// スフィア(レリック)のカテゴリ。本家の14分類に対応。
+// 1ユニットに最大2スロット、同一カテゴリは2個同時装備できない。
+const SPHERE_CATEGORIES = {
+  attack: "攻撃強化",
+  spark: "スパーク",
+  critical: "クリティカル",
+  bbgauge: "BBゲージ",
+  drop: "ドロップ",
+  recovery: "HP回復",
+  reducing: "ダメージ軽減",
+  pierce: "防御貫通",
+  status: "状態強化",
+  ailment: "状態異常付与",
+  element: "属性融合",
+  target: "ターゲット",
+  reflect: "ダメージ反射",
+  special: "特殊",
 };
+
+// 効果キーは combat 側が既に解釈する: damageMultiplier / syncMultiplier /
+// syncWindowBonusMs / critRateBonus / critDamageBonus / burstGainMultiplier /
+// bcDropBonus / healingMultiplier / damageTakenMultiplier / breakDamageMultiplier。
+const relicDefinitions = {
+  // 攻撃強化
+  relicBlade: { label: "遺剣", category: "attack", damageMultiplier: 1.08 },
+  warEdge: { label: "覇王の戦刃", category: "attack", damageMultiplier: 1.16 },
+  // スパーク
+  syncLens: { label: "同期レンズ", category: "spark", syncWindowBonusMs: 16, syncMultiplier: 1.08 },
+  sparkCore: { label: "連火の核", category: "spark", syncMultiplier: 1.18 },
+  // クリティカル
+  critEye: { label: "連命の眼", category: "critical", critRateBonus: 0.12, critDamageBonus: 0.4 },
+  // BBゲージ
+  burstCore: { label: "バースト核", category: "bbgauge", burstGainMultiplier: 1.18 },
+  // ドロップ
+  dropPrism: { label: "結晶プリズム", category: "drop", bcDropBonus: 0.15 },
+  // HP回復
+  mercyBell: { label: "慈愛の鈴", category: "recovery", healingMultiplier: 1.18 },
+  // ダメージ軽減
+  aegisCharm: { label: "守護の護符", category: "reducing", damageTakenMultiplier: 0.92 },
+  bulwark: { label: "鉄壁の盾", category: "reducing", damageTakenMultiplier: 0.85 },
+  // 防御貫通 / 崩し
+  breakBrand: { label: "崩牙の刻印", category: "pierce", breakDamageMultiplier: 1.25 },
+  // 状態強化 (汎用)
+  oracleCharm: { label: "神託の護符", category: "status", damageMultiplier: 1.05, healingMultiplier: 1.1 },
+};
+
+function sphereEffectText(def) {
+  if (!def) return "";
+  const parts = [];
+  if (def.damageMultiplier) parts.push(`与ダメ+${Math.round((def.damageMultiplier - 1) * 100)}%`);
+  if (def.syncMultiplier) parts.push(`Spark+${Math.round((def.syncMultiplier - 1) * 100)}%`);
+  if (def.syncWindowBonusMs) parts.push(`Sync窓+${def.syncWindowBonusMs}ms`);
+  if (def.critRateBonus) parts.push(`クリ率+${Math.round(def.critRateBonus * 100)}%`);
+  if (def.critDamageBonus) parts.push(`クリダメ+${Math.round(def.critDamageBonus * 100)}%`);
+  if (def.burstGainMultiplier) parts.push(`BB獲得+${Math.round((def.burstGainMultiplier - 1) * 100)}%`);
+  if (def.bcDropBonus) parts.push(`BC率+${Math.round(def.bcDropBonus * 100)}%`);
+  if (def.healingMultiplier) parts.push(`回復+${Math.round((def.healingMultiplier - 1) * 100)}%`);
+  if (def.damageTakenMultiplier) parts.push(`被ダメ-${Math.round((1 - def.damageTakenMultiplier) * 100)}%`);
+  if (def.breakDamageMultiplier) parts.push(`崩し+${Math.round((def.breakDamageMultiplier - 1) * 100)}%`);
+  return parts.join(" ");
+}
 
 const recruitableUnits = [
   {
@@ -942,6 +976,18 @@ function initializeRoster() {
   // 型未設定(旧セーブ/加入ユニット)にロール基準で型を割り当てる。
   state.roster.forEach((unit) => {
     if (!unit.type || !UNIT_TYPES[unit.type]) unit.type = ROLE_TYPE[unit.role] || "lord";
+    // スフィア整合性: 2スロット固定(null許容)・無効id除去・同カテゴリ重複除去。
+    const seenCat = new Set();
+    const raw = unit.relicIds || [];
+    const slots = [null, null];
+    for (let s = 0; s < 2; s += 1) {
+      const def = relicDefinitions[raw[s]];
+      if (def && !seenCat.has(def.category)) {
+        slots[s] = raw[s];
+        seenCat.add(def.category);
+      }
+    }
+    unit.relicIds = slots;
   });
   repairPartyIds();
 }
@@ -1065,7 +1111,7 @@ function missionSummary(questId) {
 }
 
 function unitSummary(unit) {
-  return `${unitTypeMod(unit).label} / Lv ${unit.level} / 星${unit.rarity || 1} / 体力 ${unit.maxHp} / 攻撃 ${unit.atk} / レリック ${(unit.relicIds || []).length}`;
+  return `${unitTypeMod(unit).label} / Lv ${unit.level} / 星${unit.rarity || 1} / 体力 ${unit.maxHp} / 攻撃 ${unit.atk} / スフィア ${(unit.relicIds || []).filter(Boolean).length}`;
 }
 
 function renderUnitList() {
@@ -1127,14 +1173,17 @@ function renderPowerList() {
           <div>
             <span class="unit-list__name">${unit.name}</span>
             <span class="unit-list__meta">${unitSummary(unit)}</span>
-            <span class="unit-list__meta">経験 ${unit.exp}/${expToNext(unit.level)} / ${(unit.relicIds || []).map((id) => relicDefinitions[id]?.label).join(" / ")}</span>
+            <span class="unit-list__meta">経験 ${unit.exp}/${expToNext(unit.level)}</span>
+            <span class="unit-list__meta">スフィア枠1: ${slotLabel(unit, 0)}</span>
+            <span class="unit-list__meta">スフィア枠2: ${slotLabel(unit, 1)}</span>
             <span class="unit-list__cost">${training.detail}</span>
             <span class="unit-list__cost ${evolution.ready ? "" : "is-missing"}">${evolution.detail}</span>
           </div>
           <div class="unit-list__actions">
             <button type="button" data-train-unit="${unit.id}" ${training.ready ? "" : "disabled"} title="${training.detail}">訓練</button>
             <button type="button" data-evolve-unit="${unit.id}" ${evolution.ready ? "" : "disabled"} title="${evolution.detail}">進化</button>
-            <button type="button" data-relic-unit="${unit.id}">レリック</button>
+            <button type="button" data-relic-slot="0" data-relic-unit="${unit.id}">枠1: ${slotShort(unit, 0)}</button>
+            <button type="button" data-relic-slot="1" data-relic-unit="${unit.id}">枠2: ${slotShort(unit, 1)}</button>
           </div>
         </article>
       `;
@@ -1267,8 +1316,8 @@ function wirePowerButtons() {
   document.querySelectorAll("[data-evolve-unit]").forEach((button) => {
     button.addEventListener("click", () => evolveUnit(button.dataset.evolveUnit));
   });
-  document.querySelectorAll("[data-relic-unit]").forEach((button) => {
-    button.addEventListener("click", () => cycleRelic(button.dataset.relicUnit));
+  document.querySelectorAll("[data-relic-slot]").forEach((button) => {
+    button.addEventListener("click", () => cycleRelicSlot(button.dataset.relicUnit, Number(button.dataset.relicSlot)));
   });
 }
 
@@ -1309,13 +1358,34 @@ function evolveUnit(unitId) {
   renderPowerList();
 }
 
-function cycleRelic(unitId) {
+function sphereAt(unit, slot) {
+  const id = unit.relicIds?.[slot];
+  return id ? relicDefinitions[id] : null;
+}
+
+function slotShort(unit, slot) {
+  const def = sphereAt(unit, slot);
+  return def ? def.label : "空き";
+}
+
+function slotLabel(unit, slot) {
+  const def = sphereAt(unit, slot);
+  return def ? `${def.label}〈${SPHERE_CATEGORIES[def.category]}〉 ${sphereEffectText(def)}` : "空き";
+}
+
+// 枠ごとにスフィアを切替える。もう一方の枠と同じカテゴリは候補から除外
+// (同一カテゴリ2個装備の禁止)。空き(null)も候補に含めるので外せる。
+function cycleRelicSlot(unitId, slot) {
   const unit = state.roster.find((entry) => entry.id === unitId);
   if (!unit) return;
-  const relicKeys = Object.keys(relicDefinitions);
-  const currentFirst = unit.relicIds?.[0] || relicKeys[0];
-  const next = relicKeys[(relicKeys.indexOf(currentFirst) + 1) % relicKeys.length];
-  unit.relicIds = [next, ...(unit.relicIds || []).slice(1, 2)];
+  const ids = [unit.relicIds?.[0] || null, unit.relicIds?.[1] || null];
+  const otherId = ids[1 - slot];
+  const otherCat = otherId ? relicDefinitions[otherId]?.category : null;
+  const options = [null, ...Object.keys(relicDefinitions).filter((id) => relicDefinitions[id].category !== otherCat)];
+  const current = ids[slot];
+  const idx = Math.max(0, options.indexOf(current));
+  ids[slot] = options[(idx + 1) % options.length];
+  unit.relicIds = ids; // スロット位置を固定 (空き枠は null)。詰めない。
   saveGame();
   renderPowerList();
 }
