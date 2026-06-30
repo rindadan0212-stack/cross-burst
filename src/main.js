@@ -889,6 +889,23 @@ function initializeRoster() {
       }
     });
   }
+  // 旧セーブの静的フィールド(名称/フラグ等)を baseUnits に同期する。
+  // 進行度(level/exp/rarity/atk/def/rec/maxHp/relicIds)は保持し、識別情報だけ更新。
+  const baseById = new Map(baseUnits.map((unit) => [unit.id, unit]));
+  state.roster.forEach((unit) => {
+    const base = baseById.get(unit.id);
+    if (!base) return;
+    unit.name = base.name;
+    unit.element = base.element;
+    unit.role = base.role;
+    unit.burstName = base.burstName;
+    unit.burstType = base.burstType;
+    unit.hitFrames = base.hitFrames;
+    unit.multiplier = base.multiplier;
+    unit.leaderSkillId = base.leaderSkillId;
+    if (!("guest" in base)) delete unit.guest;
+    if (!base.friendSkillId) delete unit.friendSkillId;
+  });
   repairPartyIds();
 }
 
