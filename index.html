@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#15120f" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="icon" href="data:," />
+    <title>召喚継界クロスバースト</title>
+    <link rel="stylesheet" href="src/styles.css?v=20260701b" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <nav class="app-nav" aria-label="メインナビゲーション">
+        <button type="button" data-view-target="homeView">拠点</button>
+        <button type="button" data-view-target="questView">冒険</button>
+        <button type="button" data-view-target="unitsView">部隊</button>
+        <button type="button" data-view-target="powerView">強化</button>
+        <button type="button" data-view-target="exchangeView">召喚</button>
+      </nav>
+
+      <section id="homeView" class="app-view home-view">
+        <div class="home-hero">
+          <p class="eyebrow">召喚院本部</p>
+          <h1>クロスバースト</h1>
+          <div class="skill-strip">
+            <span id="saveStatus">自動記録 準備完了</span>
+          </div>
+          <div class="home-stats">
+            <div><span>召喚位</span><strong id="homeRank">12</strong></div>
+            <div><span>体力</span><strong id="homeEnergy">24/30</strong></div>
+            <div><span>ゼル</span><strong id="homeGold">0</strong></div>
+          </div>
+        </div>
+        <div class="home-actions">
+          <button type="button" class="home-command" data-view-target="questView">冒険へ</button>
+          <button type="button" class="home-command" data-view-target="unitsView">部隊編成</button>
+          <button type="button" class="home-command" data-view-target="powerView">ユニット強化</button>
+        </div>
+      </section>
+
+      <section id="questView" class="app-view menu-view" hidden>
+        <div class="menu-header">
+          <p class="eyebrow">ワールドマップ</p>
+          <h2>崩れた神殿</h2>
+        </div>
+        <div class="quest-card">
+          <div>
+            <strong>AREA 1-4: 門を守る影</strong>
+            <span>3戦 / 樹・雷・影 / 体力 8</span>
+            <small id="shrineMissionHint">達成条件: -</small>
+          </div>
+          <button id="startQuestButton" type="button">出撃</button>
+        </div>
+        <div id="materialQuestCard" class="quest-card quest-card--locked">
+          <div>
+            <strong>素材の裂け目</strong>
+            <span id="materialQuestHint">AREA 1-4 クリアで解放</span>
+            <small id="materialMissionHint">達成条件: -</small>
+          </div>
+          <button id="materialQuestButton" type="button" disabled>未解放</button>
+        </div>
+        <div id="extraQuestList" class="unit-list"></div>
+      </section>
+
+      <section id="unitsView" class="app-view menu-view" hidden>
+        <div class="menu-header">
+          <p class="eyebrow">部隊編成</p>
+          <h2>出撃メンバー</h2>
+        </div>
+        <div id="unitList" class="unit-list"></div>
+      </section>
+
+      <section id="powerView" class="app-view menu-view" hidden>
+        <div class="menu-header">
+          <p class="eyebrow">ユニット強化</p>
+          <h2>訓練とレリック</h2>
+        </div>
+        <div id="powerList" class="unit-list"></div>
+      </section>
+
+      <section id="exchangeView" class="app-view menu-view" hidden>
+        <div class="menu-header">
+          <p class="eyebrow">召喚契約</p>
+          <h2>素材と契約</h2>
+        </div>
+        <div id="materialWallet" class="material-wallet"></div>
+        <div id="exchangeList" class="unit-list"></div>
+      </section>
+
+      <section id="battleView" class="app-view battle-view" hidden>
+      <section class="battle-topbar" aria-label="戦闘状況">
+        <div>
+          <p class="eyebrow">クエストバトル</p>
+          <h1>クロスバースト</h1>
+          <div class="skill-strip">
+            <span id="leaderSkillLabel">隊長: -</span>
+            <span id="friendSkillLabel">助っ人: -</span>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button id="guardButton" class="chrome-button" type="button" title="全員防御">防御</button>
+          <button id="speedButton" class="icon-button" type="button" title="速度切替">1x</button>
+          <button id="restartButton" class="icon-button" type="button" title="戦闘をやり直す">↻</button>
+        </div>
+      </section>
+
+      <section class="battlefield" aria-label="戦場">
+        <div class="enemy-hud">
+          <div class="quest-strip">
+            <span id="areaLabel">AREA 1-4</span>
+            <strong id="waveLabel">第1戦/3</strong>
+            <button id="autoButton" type="button">自動</button>
+          </div>
+          <div class="enemy-hud__name">
+            <span id="enemyElement" class="element element--shade">影</span>
+            <strong id="enemyName">Shadow Trial Warden</strong>
+          </div>
+          <div id="statusRail" class="status-rail"></div>
+          <div class="enemy-hud__bar">
+            <span id="enemyHpFill"></span>
+            <i></i><i></i><i></i><i></i><i></i>
+          </div>
+        <div class="break-line">
+          <span>崩し</span>
+          <div class="break-line__bar"><b id="enemyBreakFill"></b></div>
+        </div>
+        <div id="breakBanner" class="break-banner">崩し成功 追撃補正 x1.35</div>
+      </div>
+
+        <div class="battlefield__status">
+          <div class="turn-badge">
+            <span>ターン</span>
+            <strong id="turnLabel">1</strong>
+          </div>
+          <strong id="phaseLabel">味方ターン</strong>
+          <div class="sync-meter">
+            <span id="fieldLabel">場効果なし</span>
+            <strong id="syncCount">0</strong>
+          </div>
+        </div>
+
+        <div class="enemy-zone">
+          <div id="damageLayer" class="damage-layer" aria-hidden="true"></div>
+          <div class="battle-line">
+            <div class="enemy-side">
+              <button id="sideEnemyButton" type="button" class="small-enemy small-enemy--a" title="取り巻きを狙う"></button>
+              <div id="enemyIntent" class="enemy-intent">次: 斬撃</div>
+              <div id="enemySprite" class="enemy-sprite">
+                <div class="enemy-core"></div>
+              </div>
+            </div>
+            <div class="ally-side" aria-hidden="true">
+              <div class="field-unit field-unit--flame"></div>
+              <div class="field-unit field-unit--tide"></div>
+              <div class="field-unit field-unit--grove"></div>
+              <div class="field-unit field-unit--volt"></div>
+              <div class="field-unit field-unit--star"></div>
+              <div class="field-unit field-unit--shade"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="messageLog" class="message-log" aria-live="polite"></div>
+      </section>
+
+      <section class="party-panel" aria-label="部隊コマンド">
+        <div id="partyGrid" class="party-grid"></div>
+        <div class="item-row" aria-label="アイテム">
+          <button type="button" class="item-slot" data-item="cure">回復薬 <span>x10</span></button>
+          <button type="button" class="item-slot" data-item="fujin">武神薬 <span>x5</span></button>
+          <button type="button" class="item-slot" data-item="shield">護盾薬 <span>x3</span></button>
+          <button type="button" class="item-slot" data-item="revive">蘇生薬 <span>x1</span></button>
+        </div>
+      </section>
+      </section>
+
+      <section id="resultOverlay" class="result-overlay" aria-label="クエスト結果" hidden>
+        <div class="result-panel">
+          <p class="eyebrow">クエストクリア</p>
+          <h2 id="resultTitle">崩れた神殿</h2>
+          <div class="result-grid">
+            <div><span>ゼル</span><strong id="resultGold">0</strong></div>
+            <div><span>カルマ</span><strong id="resultKarma">0</strong></div>
+            <div><span>経験</span><strong id="resultExp">0</strong></div>
+            <div><span>同期</span><strong id="resultSync">0</strong></div>
+          </div>
+          <div id="dropList" class="drop-list"></div>
+          <div id="missionList" class="mission-list"></div>
+          <button id="resultRestartButton" class="result-button" type="button">もう一度出撃</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="src/combat_config.js?v=20260701b"></script>
+    <script src="src/main.js?v=20260701b"></script>
+  </body>
+</html>
