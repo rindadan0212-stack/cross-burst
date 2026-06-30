@@ -24,6 +24,29 @@ const roleLabels = {
   sync: "同期",
 };
 
+// ユニットタイプ (本家の Lord/Anima/Breaker/Guardian/Oracle 相当)。
+// ステータスに乗算補正を掛ける。Lord は均衡(補正なし)。
+const UNIT_TYPES = {
+  lord: { label: "ロード", hp: 1.0, atk: 1.0, def: 1.0, rec: 1.0 },
+  anima: { label: "アニマ", hp: 1.15, atk: 1.0, def: 1.0, rec: 0.85 },
+  breaker: { label: "ブレイカー", hp: 1.0, atk: 1.15, def: 0.85, rec: 1.0 },
+  guardian: { label: "ガーディアン", hp: 1.0, atk: 1.0, def: 1.15, rec: 0.85 },
+  oracle: { label: "オラクル", hp: 1.0, atk: 1.0, def: 0.85, rec: 1.15 },
+};
+
+// 型未設定ユニットにロール基準で型を割り当てる (決定的)。
+const ROLE_TYPE = {
+  attack: "breaker",
+  heal: "oracle",
+  guard: "guardian",
+  charge: "lord",
+  sync: "anima",
+};
+
+function unitTypeMod(unit) {
+  return UNIT_TYPES[unit && unit.type] || UNIT_TYPES.lord;
+}
+
 const PARTY_SIZE = 6;
 
 const statusLabels = {
@@ -863,9 +886,19 @@ function activeQuest() {
 }
 
 function cloneUnit(unit) {
+  // 未補正ステを base に保持し、battle 用に型補正を掛ける。
+  // sync 時は base を roster へ書き戻すので型の二重適用を防げる。
+  const mod = unitTypeMod(unit);
+  const base = { maxHp: unit.maxHp, atk: unit.atk, def: unit.def, rec: unit.rec };
+  const maxHp = Math.round(base.maxHp * mod.hp);
   return {
     ...unit,
-    hp: unit.maxHp,
+    base,
+    maxHp,
+    hp: maxHp,
+    atk: Math.round(base.atk * mod.atk),
+    def: Math.round(base.def * mod.def),
+    rec: Math.round(base.rec * mod.rec),
     burst: Math.max(unit.burst || 0, 36),
     ready: true,
   };
@@ -905,6 +938,10 @@ function initializeRoster() {
     unit.leaderSkillId = base.leaderSkillId;
     if (!("guest" in base)) delete unit.guest;
     if (!base.friendSkillId) delete unit.friendSkillId;
+  });
+  // 型未設定(旧セーブ/加入ユニット)にロール基準で型を割り当てる。
+  state.roster.forEach((unit) => {
+    if (!unit.type || !UNIT_TYPES[unit.type]) unit.type = ROLE_TYPE[unit.role] || "lord";
   });
   repairPartyIds();
 }
@@ -1028,7 +1065,7 @@ function missionSummary(questId) {
 }
 
 function unitSummary(unit) {
-  return `Lv ${unit.level} / 星${unit.rarity || 1} / 体力 ${unit.maxHp} / 攻撃 ${unit.atk} / レリック ${(unit.relicIds || []).length}`;
+  return `${unitTypeMod(unit).label} / Lv ${unit.level} / 星${unit.rarity || 1} / 体力 ${unit.maxHp} / 攻撃 ${unit.atk} / レリック ${(unit.relicIds || []).length}`;
 }
 
 function renderUnitList() {
@@ -1285,14 +1322,29 @@ function cycleRelic(unitId) {
 
 function applyLevelUps(unit) {
   let needed = expToNext(unit.level);
+  const mod = unit.base ? unitTypeMod(unit) : null;
   while (unit.exp >= needed) {
     unit.exp -= needed;
     unit.level += 1;
-    unit.maxHp = Math.floor(unit.maxHp * 1.035);
-    unit.hp = Math.min(unit.maxHp, (unit.hp || unit.maxHp) + Math.floor(unit.maxHp * 0.18));
-    unit.atk = Math.floor(unit.atk * 1.025);
-    unit.def = Math.floor(unit.def * 1.02);
-    unit.rec = Math.floor(unit.rec * 1.02);
+    if (unit.base) {
+      // battle unit: 未補正 base を成長させ、型補正後を再計算する。
+      unit.base.maxHp = Math.floor(unit.base.maxHp * 1.035);
+      unit.base.atk = Math.floor(unit.base.atk * 1.025);
+      unit.base.def = Math.floor(unit.base.def * 1.02);
+      unit.base.rec = Math.floor(unit.base.rec * 1.02);
+      unit.maxHp = Math.round(unit.base.maxHp * mod.hp);
+      unit.hp = Math.min(unit.maxHp, (unit.hp || unit.maxHp) + Math.floor(unit.maxHp * 0.18));
+      unit.atk = Math.round(unit.base.atk * mod.atk);
+      unit.def = Math.round(unit.base.def * mod.def);
+      unit.rec = Math.round(unit.base.rec * mod.rec);
+    } else {
+      // roster unit (Train/Evolve): 未補正のまま成長。
+      unit.maxHp = Math.floor(unit.maxHp * 1.035);
+      unit.hp = Math.min(unit.maxHp, (unit.hp || unit.maxHp) + Math.floor(unit.maxHp * 0.18));
+      unit.atk = Math.floor(unit.atk * 1.025);
+      unit.def = Math.floor(unit.def * 1.02);
+      unit.rec = Math.floor(unit.rec * 1.02);
+    }
     needed = expToNext(unit.level);
   }
 }
@@ -1961,9 +2013,16 @@ function grantPartyExp(amount) {
 function syncRosterUnit(battleUnit) {
   const unit = state.roster.find((entry) => entry.id === battleUnit.id);
   if (!unit) return;
-  ["level", "exp", "maxHp", "atk", "def", "rec", "rarity", "relicIds"].forEach((key) => {
-    unit[key] = Array.isArray(battleUnit[key]) ? [...battleUnit[key]] : battleUnit[key];
-  });
+  unit.level = battleUnit.level;
+  unit.exp = battleUnit.exp;
+  unit.rarity = battleUnit.rarity;
+  unit.relicIds = Array.isArray(battleUnit.relicIds) ? [...battleUnit.relicIds] : battleUnit.relicIds;
+  // ステは型補正前の base を書き戻す (型の二重適用を防ぐ)。
+  const src = battleUnit.base || battleUnit;
+  unit.maxHp = src.maxHp;
+  unit.atk = src.atk;
+  unit.def = src.def;
+  unit.rec = src.rec;
 }
 
 function expToNext(level) {
@@ -2449,7 +2508,7 @@ function renderParty() {
         </div>
         <div class="bar bar--hp"><span style="width:${hpPct}%"></span></div>
         <div class="unit-card__line unit-card__line--sub">
-          <span class="unit-card__lv">Lv${unit.level} ${roleLabels[unit.role]}</span>
+          <span class="unit-card__lv">Lv${unit.level} ${unitTypeMod(unit).label}</span>
           ${bbTag ? `<span class="unit-card__bbtag">${bbTag}!</span>` : `<span class="unit-card__bbpct">BB ${Math.floor(bbPct)}%</span>`}
         </div>
         <div class="bar bar--burst"><span style="width:${bbPct}%"></span></div>
