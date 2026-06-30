@@ -1078,6 +1078,62 @@ h1 {
     rgba(22, 18, 15, 0.9);
 }
 
+/* オーバードライブ ゲージ（満タンで UBB 発動） */
+.overdrive {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 22px;
+  margin-bottom: 7px;
+  padding: 0;
+  border: 1px solid rgba(255, 210, 120, 0.42);
+  border-radius: 6px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(58, 43, 20, 0.92), rgba(22, 17, 11, 0.92));
+  color: #ffe9b0;
+  font-weight: 900;
+  font-size: 0.62rem;
+  cursor: default;
+}
+
+.overdrive:disabled {
+  cursor: default;
+}
+
+.overdrive__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: linear-gradient(90deg, #9c5f22, #e7a73e);
+  transition: width 180ms ease;
+}
+
+.overdrive__label {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  height: 100%;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.65);
+}
+
+.overdrive.is-ready {
+  cursor: pointer;
+  border-color: #ffe79a;
+  color: #2a1c05;
+  animation: odReady 0.9s ease-in-out infinite;
+}
+
+.overdrive.is-ready .overdrive__fill {
+  background: linear-gradient(90deg, #ffcf5e, #fff4c4, #ffcf5e);
+}
+
+@keyframes odReady {
+  0%, 100% { box-shadow: 0 0 8px rgba(255, 200, 90, 0.45); }
+  50% { box-shadow: 0 0 22px rgba(255, 226, 122, 0.95); }
+}
+
 .party-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr);
@@ -1088,8 +1144,11 @@ h1 {
 
 .unit-card {
   position: relative;
-  min-height: 74px;
-  padding: 7px 8px 7px 48px;
+  min-height: 66px;
+  padding: 6px 9px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   border: 2px solid rgba(47, 33, 21, 0.96);
   border-radius: 8px;
   color: var(--text);
@@ -1210,8 +1269,7 @@ h1 {
 }
 
 .unit-card--right {
-  padding-right: 48px;
-  padding-left: 8px;
+  flex-direction: row-reverse;
 }
 
 .unit-card__top {
@@ -1221,13 +1279,71 @@ h1 {
   gap: 4px;
 }
 
+.unit-card__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.unit-card__line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  line-height: 1.15;
+}
+
 .unit-card__name {
-  max-width: 132px;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.76rem;
+  font-size: 0.8rem;
   font-weight: 800;
+}
+
+.unit-card__hp {
+  flex: none;
+  color: #f3ead0;
+  font-size: 0.58rem;
+  font-weight: 900;
+  text-shadow: 0 1px 0 #000;
+}
+
+.unit-card__line--sub {
+  font-size: 0.55rem;
+  font-weight: 900;
+}
+
+.unit-card__lv {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #e6d3ab;
+}
+
+.unit-card__bbpct {
+  flex: none;
+  color: #9fd8ee;
+}
+
+.unit-card__bbtag {
+  flex: none;
+  padding: 0 6px;
+  border-radius: 3px;
+  color: #082736;
+  background: linear-gradient(180deg, #bdf4ff, #43b9e9);
+}
+
+.unit-card.is-sbb-ready .unit-card__bbtag {
+  color: #321d00;
+  background: linear-gradient(180deg, #fff2a7, #f1b739);
 }
 
 .unit-card__hptext {
@@ -1342,8 +1458,8 @@ h1 {
 }
 
 .unit-card .bar {
-  height: 6px;
-  margin-top: 3px;
+  height: 5px;
+  margin: 0;
 }
 
 .bar--burst span {
@@ -1358,11 +1474,10 @@ h1 {
 }
 
 .unit-card__portrait {
-  position: absolute;
-  left: 7px;
-  top: 8px;
+  position: static;
+  flex: none;
   width: 34px;
-  height: 52px;
+  height: 50px;
   border-radius: 6px 10px 6px 10px;
   display: grid;
   place-items: center;
@@ -1581,28 +1696,22 @@ h1 {
   }
 
   .party-grid {
-    grid-template-columns: minmax(0, 1fr) 48px minmax(0, 1fr);
-    grid-template-rows: repeat(3, 72px);
+    grid-template-columns: minmax(0, 1fr) 46px minmax(0, 1fr);
+    grid-template-rows: repeat(3, 64px);
     gap: 5px;
   }
 
   .unit-card {
-    min-height: 72px;
-    padding: 6px 6px 6px 42px;
+    min-height: 60px;
+    padding: 5px 7px;
   }
 
   .unit-card--right {
-    padding-right: 42px;
-    padding-left: 6px;
+    padding: 5px 7px;
   }
 
   .unit-card__name {
-    max-width: 94px;
-    font-size: 0.68rem;
-  }
-
-  .unit-card__hint {
-    font-size: 0.62rem;
+    font-size: 0.74rem;
   }
 
   .skill-strip span {
@@ -1611,7 +1720,7 @@ h1 {
 
   .unit-card__portrait {
     width: 30px;
-    height: 48px;
+    height: 44px;
   }
 
   .xbb-gauge__crystal {

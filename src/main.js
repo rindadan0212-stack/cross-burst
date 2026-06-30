@@ -429,7 +429,7 @@ const baseUnits = [
   },
   {
     id: "shade-friend",
-    name: "影助っ人",
+    name: "影刃士",
     element: "shade",
     role: "attack",
     maxHp: 545,
@@ -444,8 +444,6 @@ const baseUnits = [
     multiplier: 0.62,
     burstName: "影裂き",
     burstType: "damage",
-    guest: true,
-    friendSkillId: "friend-shadow-link",
     relicIds: ["breakBrand", "relicBlade"],
   },
   {
@@ -795,6 +793,7 @@ const state = {
     breaks: 0,
   },
   totalSyncs: 0,
+  overdrive: 0,
   actionQueue: [],
   actedUnitIds: new Set(),
   party: [],
@@ -828,6 +827,7 @@ const els = {
   speedButton: document.querySelector("#speedButton"),
   guardButton: document.querySelector("#guardButton"),
   autoButton: document.querySelector("#autoButton"),
+  overdriveBar: document.querySelector("#overdriveBar"),
   itemButtons: document.querySelectorAll("[data-item]"),
   waveLabel: document.querySelector("#waveLabel"),
   navButtons: document.querySelectorAll("[data-view-target]"),
@@ -1054,8 +1054,7 @@ function toggleSquadUnit(unitId) {
   if (state.partyIds.length < PARTY_SIZE) {
     state.partyIds.push(unitId);
   } else {
-    const replaceIndex = Math.max(0, state.partyIds.findIndex((id) => id !== "shade-friend"));
-    state.partyIds[replaceIndex] = unitId;
+    state.partyIds[0] = unitId;
   }
   repairPartyIds();
   saveGame();
@@ -1375,6 +1374,7 @@ function resetBattle() {
     breaks: 0,
   };
   state.totalSyncs = 0;
+  state.overdrive = 0;
   state.actionQueue = [];
   state.actedUnitIds = new Set();
   state.party = state.partyIds
@@ -1821,6 +1821,10 @@ function resolvePlayerActions() {
       const result = calculateDamage(unit, hit.multiplier, { isSync });
       target.hp = Math.max(0, target.hp - result.damage);
       rollHitBc(unit, isSync);
+      state.overdrive = Math.min(
+        window.COMBAT.overdriveMax,
+        state.overdrive + (isSync ? window.COMBAT.odGainSync : window.COMBAT.odGainHit)
+      );
       if (target === state.enemy) applyHitStatus(unit, isSync, hit.source);
       flashEnemy();
       showHitEffect(isSync);
@@ -2143,7 +2147,7 @@ function startNextPlayerTurn() {
     if (state.enemy.barrierTurns <= 0) state.enemy.barrierElement = null;
   }
 
-  log("味方ターン。Shift+クリックでBB/SBB、通常クリックで攻撃。");
+  log("味方ターン。タップで攻撃、長押し/上スワイプでBB。OD満タンでUBB。");
   render();
 }
 
@@ -2196,11 +2200,53 @@ function flashEnemy() {
   setTimeout(() => els.enemySprite.classList.remove("is-hit", "flash"), 170);
 }
 
+function renderOverdrive() {
+  if (!els.overdriveBar) return;
+  const max = window.COMBAT.overdriveMax;
+  const pct = Math.min(100, (state.overdrive / max) * 100);
+  const ready = state.overdrive >= max;
+  els.overdriveBar.classList.toggle("is-ready", ready);
+  els.overdriveBar.disabled = !(ready && state.phase === "player");
+  const fill = els.overdriveBar.querySelector(".overdrive__fill");
+  const label = els.overdriveBar.querySelector(".overdrive__label");
+  if (fill) fill.style.width = `${pct}%`;
+  if (label) label.textContent = ready ? "⚡ アルティメットバースト 発動可" : `オーバードライブ ${Math.floor(pct)}%`;
+}
+
+// Ultimate Brave Burst: ODゲージ満タンで全軍が一斉に究極攻撃。
+// 既存のヒット解決パイプライン(actionQueue → resolvePlayerActions)を再利用する。
+function fireUbb() {
+  if (state.phase !== "player" || state.overdrive < window.COMBAT.overdriveMax) return;
+  const living = livingParty();
+  if (living.length === 0) return;
+  state.overdrive = 0;
+  living.forEach((unit, idx) => {
+    unit.ready = false;
+    state.actedUnitIds.add(unit.id);
+    [120, 220, 320, 440, 560].forEach((frame, i) => {
+      state.actionQueue.push({
+        attackerId: unit.id,
+        attackerName: unit.name,
+        element: unit.element,
+        hitTimeMs: frame + idx * 55,
+        multiplier: unit.multiplier * window.COMBAT.ubbMultiplier,
+        source: "ubb",
+        hitIndex: i,
+      });
+    });
+  });
+  log("⚡ 全軍の力を解き放つ —— アルティメットバースト!");
+  shakeScreen(true);
+  render();
+  resolvePlayerActions();
+}
+
 function render() {
   renderEnemy();
   renderParty();
   renderSkillLabels();
   renderItems();
+  renderOverdrive();
   els.areaLabel.textContent = activeQuest().area;
   els.waveLabel.textContent = `第${state.waveIndex + 1}戦/${activeQuest().waves.length}`;
   els.turnLabel.textContent = `${state.turn}`;
@@ -2221,9 +2267,8 @@ function renderItems() {
 
 function renderSkillLabels() {
   const leader = activeLeaderSkill();
-  const friend = activeFriendSkill();
   els.leaderSkillLabel.textContent = leader ? `隊長: ${leader.label} - ${leader.description}` : "隊長: -";
-  els.friendSkillLabel.textContent = friend ? `助っ人: ${friend.label} - ${friend.description}` : "助っ人: -";
+  els.friendSkillLabel.hidden = true; // 助っ人システム廃止 (6体すべて自前)
 }
 
 function phaseLabel() {
@@ -2364,7 +2409,7 @@ function renderParty() {
   state.party.forEach((unit, index) => {
     const isRight = index % 2 === 1;
     const button = document.createElement("button");
-    button.className = `unit-card ${isRight ? "unit-card--right" : "unit-card--left"} ${unit.guest ? "is-guest" : ""}`;
+    button.className = `unit-card ${isRight ? "unit-card--right" : "unit-card--left"}`;
     button.type = "button";
     button.style.gridColumn = isRight ? "3" : "1";
     button.style.gridRow = `${Math.floor(index / 2) + 1}`;
@@ -2375,20 +2420,23 @@ function renderParty() {
     }
     wireUnitGesture(button, unit.id);
 
+    const hpPct = Math.max(0, (unit.hp / unit.maxHp) * 100);
+    const bbPct = Math.min(100, unit.burst);
+    const bbTag = unit.burst >= 200 ? "SBB" : unit.burst >= 100 ? "BB" : "";
     button.innerHTML = `
-      <div class="unit-card__top">
-        <span class="unit-card__name">${unit.name}</span>
-        <span class="unit-card__portrait element--${unit.element}">${ELEMENT_LABELS[unit.element]}</span>
+      <span class="unit-card__portrait element--${unit.element}">${ELEMENT_LABELS[unit.element]}</span>
+      <div class="unit-card__body">
+        <div class="unit-card__line">
+          <span class="unit-card__name">${unit.name}</span>
+          <span class="unit-card__hp">${unit.hp}/${unit.maxHp}</span>
+        </div>
+        <div class="bar bar--hp"><span style="width:${hpPct}%"></span></div>
+        <div class="unit-card__line unit-card__line--sub">
+          <span class="unit-card__lv">Lv${unit.level} ${roleLabels[unit.role]}</span>
+          ${bbTag ? `<span class="unit-card__bbtag">${bbTag}!</span>` : `<span class="unit-card__bbpct">BB ${Math.floor(bbPct)}%</span>`}
+        </div>
+        <div class="bar bar--burst"><span style="width:${bbPct}%"></span></div>
       </div>
-      <span class="unit-card__level">Lv ${unit.level}</span>
-      <span class="unit-card__hptext">${unit.hp}/${unit.maxHp}</span>
-      <div class="unit-card__role">${roleLabels[unit.role]}</div>
-      <div class="bar bar--hp"><span style="width: ${(unit.hp / unit.maxHp) * 100}%"></span></div>
-      <div class="bar bar--burst"><span style="width: ${Math.min(100, unit.burst)}%"></span></div>
-      <span class="alt-chip">技 3/3</span>
-      <span class="relic-chip">${unitRelics(unit).map((relic) => relic.label).join(" / ")}</span>
-      <span class="pair-chip">${partnerNameFor(unit.id)}</span>
-      <div class="unit-card__hint">${unit.burst >= 200 ? "長押しでSBB" : unit.burst >= 100 ? "長押し/上スワイプでBB" : `BB ${Math.floor(unit.burst)}% / 経験 ${Math.floor((unit.exp / expToNext(unit.level)) * 100)}%`}</div>
     `;
 
     els.partyGrid.appendChild(button);
@@ -2419,6 +2467,7 @@ els.restartButton.addEventListener("click", resetBattle);
 els.resultRestartButton.addEventListener("click", () => {
   startQuest(state.activeQuestId);
 });
+els.overdriveBar.addEventListener("click", fireUbb);
 els.guardButton.addEventListener("click", () => {
   if (state.phase !== "player") return;
   state.fullGuardQueued = true;

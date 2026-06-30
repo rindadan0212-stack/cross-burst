@@ -33,6 +33,12 @@ window.COMBAT = {
   varianceMax: 1.05, // 非クリ時のダメージ乱数上限
   minorAdditiveDiv: [25, 32], // 本家の微少加算項 + ATK / rand(25,32)
 
+  // --- オーバードライブ / UBB (overdrive / ultimate) ---
+  overdriveMax: 100, // ODゲージ満タン値
+  odGainHit: 2, // 1ヒットあたりのOD蓄積
+  odGainSync: 3.5, // Spark成立ヒットのOD蓄積
+  ubbMultiplier: 2.4, // UBB各ヒットの倍率(通常攻撃multiplierに乗算)
+
   // --- 崩し / バリア (break / barrier) ---
   breakBonus: 1.35, // Break 脆弱中の与ダメージ倍率
   barrierMatch: 1.22, // ボスバリアの対応属性ヒット

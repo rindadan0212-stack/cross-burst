@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="icon" href="data:," />
     <title>召喚継界クロスバースト</title>
-    <link rel="stylesheet" href="src/styles.css?v=20260701b" />
+    <link rel="stylesheet" href="src/styles.css?v=20260701e" />
   </head>
   <body>
     <main class="app-shell">
@@ -167,6 +167,10 @@
       </section>
 
       <section class="party-panel" aria-label="部隊コマンド">
+        <button id="overdriveBar" class="overdrive" type="button" disabled>
+          <span class="overdrive__fill"></span>
+          <span class="overdrive__label">オーバードライブ 0%</span>
+        </button>
         <div id="partyGrid" class="party-grid"></div>
         <div class="item-row" aria-label="アイテム">
           <button type="button" class="item-slot" data-item="cure">回復薬 <span>x10</span></button>
@@ -194,7 +198,7 @@
       </section>
     </main>
 
-    <script src="src/combat_config.js?v=20260701b"></script>
-    <script src="src/main.js?v=20260701b"></script>
+    <script src="src/combat_config.js?v=20260701e"></script>
+    <script src="src/main.js?v=20260701e"></script>
   </body>
 </html>
