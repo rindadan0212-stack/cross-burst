@@ -1713,17 +1713,20 @@ function burstTier(unit) {
   return unit.burst >= 200 ? "SBB" : "BB";
 }
 
-function queueBurst(unit) {
-  if (unit.burst < 100) {
+// useSbb: プレイヤーが SBB を選んだか。BB は1本(100)、SBB は2本(200)消費。
+// SBB はゲージが200未満なら発動できない (BB とは独立した上位技)。
+function queueBurst(unit, useSbb) {
+  const isSbb = Boolean(useSbb) && unit.burst >= 200;
+  if (!isSbb && unit.burst < 100) {
     log(`${unit.name}のBBゲージが足りません。`);
     return;
   }
 
-  const tier = burstTier(unit);
-  const isSbb = tier === "SBB";
+  const tier = isSbb ? "SBB" : "BB";
   unit.burst -= isSbb ? 200 : 100;
   unit.ready = false;
   state.actedUnitIds.add(unit.id);
+  if (isSbb) shakeScreen(false); // SBB は一段強い演出
 
   if (unit.burstType === "damage") {
     const frames = isSbb ? [150, 240, 330, 420, 510, 600, 690, 820] : [210, 330, 450, 570, 690];
@@ -1791,14 +1794,21 @@ function rollHitBc(unit, isSync) {
   if (Math.random() < rate) gainBurst(unit, cfg.bcValue);
 }
 
-function handleUnitClick(unitId, useBurst) {
+// action: "normal" | "bb" | "sbb"。上スワイプ=bb / 右スワイプ=sbb。
+function handleUnitClick(unitId, action) {
   if (state.phase !== "player") return;
   const unit = state.party.find((entry) => entry.id === unitId);
   if (!unit || unit.hp <= 0 || !unit.ready) return;
 
-  if (useBurst) {
-    if (unit.burst < 100) return; // ゲージ不足の長押し/スワイプは不発 (本家と同じ)
-    queueBurst(unit);
+  if (action === "sbb") {
+    if (unit.burst < 200) {
+      log(`${unit.name}のSBBゲージ(2本)が足りません。`);
+      return; // SBB 不足時は不発 (BB へ勝手に落とさない = 選択の独立性)
+    }
+    queueBurst(unit, true);
+  } else if (action === "bb") {
+    if (unit.burst < 100) return; // ゲージ不足の長押し/上スワイプは不発
+    queueBurst(unit, false);
   } else {
     queueNormalAttack(unit);
   }
@@ -1809,48 +1819,59 @@ function handleUnitClick(unitId, useBurst) {
   }
 }
 
-// スマホ向けタッチジェスチャ: タップ=通常攻撃 / 長押し・上スワイプ=Brave Burst。
-// PC は右クリック(contextmenu)/Shift+クリックでも Burst を発動できる。
+// スマホ向けタッチジェスチャ:
+//   タップ=通常攻撃 / 上スワイプ・長押し=BB / 右スワイプ=SBB。
+// PC: Shift+クリック=BB / Shift+Alt+クリック・右クリック=SBB。
 function wireUnitGesture(button, unitId) {
   const LONG_MS = 300;
   const SWIPE_PX = 26;
   let timer = null;
+  let startX = 0;
   let startY = 0;
   let fired = false;
   let longPressed = false;
 
-  const fire = (useBurst) => {
+  const fire = (action) => {
     if (fired) return;
     fired = true;
     button.classList.remove("is-pressing", "is-charging");
-    handleUnitClick(unitId, useBurst);
+    handleUnitClick(unitId, action);
   };
 
   button.addEventListener("pointerdown", (event) => {
     if (button.disabled) return;
     fired = false;
     longPressed = false;
+    startX = event.clientX;
     startY = event.clientY;
     button.classList.add("is-pressing");
     timer = setTimeout(() => {
       longPressed = true;
       button.classList.add("is-charging");
-      fire(true); // 長押し → Burst
+      fire("bb"); // 長押し → BB
     }, LONG_MS);
   });
 
   button.addEventListener("pointermove", (event) => {
     if (fired) return;
-    if (startY - event.clientY > SWIPE_PX) {
+    const dx = event.clientX - startX;
+    const dy = startY - event.clientY;
+    if (dy > SWIPE_PX && dy >= Math.abs(dx)) {
       clearTimeout(timer);
-      fire(true); // 上スワイプ → Burst
+      fire("bb"); // 上スワイプ → BB
+    } else if (dx > SWIPE_PX && dx > Math.abs(dy)) {
+      clearTimeout(timer);
+      fire("sbb"); // 右スワイプ → SBB
     }
   });
 
   button.addEventListener("pointerup", (event) => {
     clearTimeout(timer);
     button.classList.remove("is-pressing");
-    if (!fired && !longPressed) fire(Boolean(event.shiftKey)); // タップ=通常 / Shift+クリック=Burst
+    if (!fired && !longPressed) {
+      const action = event.shiftKey ? (event.altKey ? "sbb" : "bb") : "normal";
+      fire(action); // タップ=通常 / Shift=BB / Shift+Alt=SBB
+    }
   });
 
   const cancel = () => {
@@ -1861,7 +1882,7 @@ function wireUnitGesture(button, unitId) {
   button.addEventListener("pointerleave", cancel);
   button.addEventListener("contextmenu", (event) => {
     event.preventDefault();
-    fire(true); // 右クリック → Burst
+    fire("sbb"); // 右クリック → SBB
   });
 }
 
@@ -2293,7 +2314,7 @@ function startNextPlayerTurn() {
     if (state.enemy.barrierTurns <= 0) state.enemy.barrierElement = null;
   }
 
-  log("味方ターン。タップで攻撃、長押し/上スワイプでBB。OD満タンでUBB。");
+  log("味方ターン。タップ=攻撃 / 上スワイプ=BB / 右スワイプ=SBB(2本) / OD満タン=UBB。");
   render();
 }
 
@@ -2568,7 +2589,7 @@ function renderParty() {
 
     const hpPct = Math.max(0, (unit.hp / unit.maxHp) * 100);
     const bbPct = Math.min(100, unit.burst);
-    const bbTag = unit.burst >= 200 ? "SBB" : unit.burst >= 100 ? "BB" : "";
+    const bbTag = unit.burst >= 200 ? "SBB→" : unit.burst >= 100 ? "BB↑" : "";
     button.innerHTML = `
       <span class="unit-card__portrait element--${unit.element}">${ELEMENT_LABELS[unit.element]}</span>
       <div class="unit-card__body">
