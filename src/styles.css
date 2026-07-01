@@ -679,7 +679,6 @@ body.in-battle .battlefield {
   text-align: right;
 }
 
-.battle-topbar,
 .party-panel,
 .battlefield {
   position: relative;
@@ -696,22 +695,13 @@ body.in-battle .battlefield {
 
 .battle-topbar {
   min-height: 34px;
-  border-radius: 8px;
-  padding: 5px 10px;
+  padding: 2px 4px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   position: relative;
-  overflow: hidden;
-}
-
-.battle-topbar::after {
-  content: "";
-  position: absolute;
-  inset: auto 10px 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(117, 221, 236, 0.85), rgba(255, 225, 119, 0.78), transparent);
+  background: transparent;
 }
 
 .eyebrow {
@@ -735,20 +725,15 @@ h1 {
 }
 
 .skill-strip span {
-  max-width: 150px;
+  max-width: 190px;
   overflow: hidden;
-  padding: 3px 8px;
-  border: 1px solid rgba(255, 238, 181, 0.35);
-  border-radius: 5px;
-  color: #e7fbff;
-  background:
-    linear-gradient(180deg, rgba(113, 207, 232, 0.16), rgba(8, 19, 23, 0.8)),
-    rgba(18, 32, 36, 0.72);
-  font-size: 0.62rem;
-  font-weight: 900;
+  padding: 2px 4px;
+  color: #a9c6cc;
+  font-size: 0.64rem;
+  font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
-  box-shadow: inset 0 0 12px rgba(89, 210, 255, 0.1);
+  letter-spacing: 0.02em;
 }
 
 .topbar-actions {
@@ -824,17 +809,10 @@ h1 {
 
 .enemy-hud {
   position: relative;
-  z-index: 1;
-  margin: 6px;
-  padding: 4px 8px 4px;
-  border: 1px solid rgba(255, 232, 156, 0.28);
-  border-radius: 7px;
-  background:
-    linear-gradient(180deg, rgba(255, 231, 153, 0.14), rgba(8, 10, 12, 0.58)),
-    rgba(22, 17, 14, 0.72);
-  box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.35),
-    0 8px 18px rgba(0, 0, 0, 0.28);
+  z-index: 2;
+  margin: 4px 10px 0;
+  padding: 2px 2px 4px;
+  background: transparent;
 }
 
 .quest-strip {
@@ -851,12 +829,14 @@ h1 {
 
 .quest-strip span,
 .quest-strip strong {
-  padding: 3px 8px;
-  border: 1px solid rgba(255, 238, 181, 0.42);
-  border-radius: 4px;
-  background:
-    linear-gradient(180deg, rgba(255, 235, 168, 0.13), rgba(9, 12, 13, 0.76)),
-    rgba(20, 16, 13, 0.68);
+  padding: 0;
+  color: rgba(255, 244, 207, 0.72);
+  font-size: 0.62rem;
+  letter-spacing: 0.03em;
+}
+
+.quest-strip strong {
+  color: #ffe9a6;
 }
 
 .quest-strip button {
@@ -888,13 +868,14 @@ h1 {
 }
 
 .enemy-hud__name .element {
-  width: 24px;
-  height: 24px;
-  font-size: 0.7rem;
+  width: 28px;
+  height: 28px;
+  font-size: 0.82rem;
 }
 
 .enemy-hud__name strong {
-  font-size: 0.82rem;
+  font-size: 1.12rem;
+  letter-spacing: 0.02em;
   text-shadow: 0 2px 0 #000;
 }
 
@@ -924,8 +905,8 @@ h1 {
 
 .enemy-hud__bar {
   position: relative;
-  height: 15px;
-  margin-top: 4px;
+  height: 18px;
+  margin-top: 5px;
   border: 2px solid #2b1712;
   border-radius: 999px;
   overflow: hidden;
@@ -1009,15 +990,13 @@ h1 {
 .battlefield__status {
   position: relative;
   z-index: 1;
-  min-height: 28px;
-  margin: 0 6px;
-  padding: 3px 10px;
+  min-height: 22px;
+  margin: 2px 10px 0;
+  padding: 0 2px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border: 1px solid rgba(255, 236, 184, 0.16);
-  border-radius: 7px;
-  background: rgba(8, 12, 14, 0.44);
+  background: transparent;
 }
 
 .battlefield__status span {
@@ -1077,33 +1056,33 @@ h1 {
 .enemy-zone {
   z-index: 1;
   position: relative;
-  min-height: 230px;
+  min-height: 186px;
   display: grid;
   align-items: center;
-  padding: 14px 12px 68px;
+  padding: 6px 12px 14px;
 }
 
 .battle-line {
   position: relative;
-  min-height: 172px;
+  min-height: 186px;
   display: grid;
-  grid-template-columns: 44% 56%;
+  grid-template-columns: 1fr;
   align-items: end;
 }
 
 .enemy-side,
 .ally-side {
   position: relative;
-  height: 172px;
+  height: 186px;
 }
 
 .enemy-sprite {
   position: relative;
-  width: 152px;
+  width: 178px;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
-  margin: 24px auto 0 12px;
+  margin: 6px auto 0;
   filter:
     drop-shadow(0 20px 24px rgba(0, 0, 0, 0.45))
     saturate(1.18);
@@ -1115,7 +1094,7 @@ h1 {
 }
 
 .enemy-core {
-  width: 112px;
+  width: 134px;
   aspect-ratio: 1;
   border-radius: 46% 54% 48% 52%;
   background:
@@ -1217,7 +1196,7 @@ h1 {
 }
 
 .ally-side {
-  filter: drop-shadow(0 9px 8px rgba(0, 0, 0, 0.35));
+  display: none;
 }
 
 .field-unit {
@@ -1531,17 +1510,16 @@ h1 {
 .message-log {
   position: relative;
   z-index: 1;
-  min-height: 46px;
-  margin: 0 8px 8px;
-  padding: 10px 12px;
-  color: #fff8dc;
-  border: 1px solid rgba(255, 236, 184, 0.2);
-  border-radius: 7px;
-  background:
-    linear-gradient(180deg, rgba(255, 238, 181, 0.08), rgba(7, 8, 10, 0.72)),
-    rgba(9, 10, 10, 0.5);
-  font-size: 0.88rem;
-  font-weight: 800;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  margin: 0 10px 6px;
+  padding: 6px 10px;
+  color: #fdf3d4;
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(6, 7, 9, 0.1), rgba(6, 7, 9, 0.62));
+  font-size: 0.82rem;
+  font-weight: 700;
   text-shadow: 0 1px 0 #000;
 }
 
@@ -1859,14 +1837,14 @@ h1 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.74rem;
+  font-size: 0.92rem;
   font-weight: 800;
   color: #fff4d6;
 }
 
 .unit-card__hp {
   color: #f3ead0;
-  font-size: 0.62rem;
+  font-size: 0.82rem;
   font-weight: 900;
   text-shadow: 0 1px 0 #000;
 }
@@ -1877,7 +1855,7 @@ h1 {
 }
 
 .unit-card__burstlabel {
-  font-size: 0.56rem;
+  font-size: 0.7rem;
   font-weight: 900;
   letter-spacing: 0.02em;
   color: #8ab0c4;
@@ -2082,7 +2060,7 @@ h1 {
   inset: 0;
   display: grid;
   place-items: center;
-  font-size: 3.6rem;
+  font-size: 4.4rem;
   z-index: 2;
   pointer-events: none;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6));
@@ -2296,30 +2274,34 @@ h1 {
 
   .party-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: repeat(3, 96px);
-    gap: 5px;
-  }
-
-  .unit-card {
-    min-height: 96px;
-    padding: 5px;
+    grid-template-rows: repeat(3, 86px);
     gap: 6px;
   }
 
+  .unit-card {
+    min-height: 86px;
+    padding: 6px;
+    gap: 8px;
+  }
+
   .unit-card__name {
-    font-size: 0.72rem;
+    font-size: 0.92rem;
   }
 
   .unit-card__hp {
-    font-size: 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  .unit-card__burstlabel {
+    font-size: 0.68rem;
   }
 
   .skill-strip span {
-    max-width: 132px;
+    max-width: 180px;
   }
 
   .unit-card__portrait {
-    width: 58px;
+    width: 60px;
     font-size: 1.2rem;
   }
 
