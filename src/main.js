@@ -1430,9 +1430,11 @@ function partnerNameForRoster(unitId) {
 function createEnemyForWave(waveIndex) {
   const wave = activeQuest().waves[waveIndex];
   const isBoss = waveIndex === activeQuest().waves.length - 1 || wave.maxHp >= 7000;
+  const scaledHp = Math.round(wave.maxHp * (window.COMBAT.strategy.enemyHpScale || 1));
   return {
     ...wave,
-    hp: wave.maxHp,
+    maxHp: scaledHp,
+    hp: scaledHp,
     break: wave.maxBreak,
     breakVulnerableTurns: 0,
     statuses: [],
@@ -1442,6 +1444,7 @@ function createEnemyForWave(waveIndex) {
     barrierTurns: 0,
     atkMultiplier: 1,
     charged: false,
+    chargeCounter: 0,
     turn: 0,
   };
 }
@@ -1742,7 +1745,7 @@ function queueBurst(unit, useSbb) {
       });
     });
     if (isSbb) {
-      state.enemy.break = Math.max(0, state.enemy.break - 18 * relicProduct(unit, "breakDamageMultiplier"));
+      state.enemy.break = Math.max(0, state.enemy.break - window.COMBAT.strategy.sbbBreakDamage * relicProduct(unit, "breakDamageMultiplier"));
     }
     log(`${unit.name}が${tier}: ${unit.burstName}を放つ。`);
   }
@@ -1830,6 +1833,7 @@ function wireUnitGesture(button, unitId) {
   let startY = 0;
   let fired = false;
   let longPressed = false;
+  let started = false; // このボタンで pointerdown した本物のジェスチャか
 
   const fire = (action) => {
     if (fired) return;
@@ -1840,6 +1844,9 @@ function wireUnitGesture(button, unitId) {
 
   button.addEventListener("pointerdown", (event) => {
     if (button.disabled) return;
+    // ポインタをこのボタンに固定。以降の move/up が隣ユニットへ漏れず誤タッチを防ぐ。
+    try { button.setPointerCapture(event.pointerId); } catch {}
+    started = true;
     fired = false;
     longPressed = false;
     startX = event.clientX;
@@ -1853,7 +1860,7 @@ function wireUnitGesture(button, unitId) {
   });
 
   button.addEventListener("pointermove", (event) => {
-    if (fired) return;
+    if (!started || fired) return; // 自分で開始したジェスチャのみ処理
     const dx = event.clientX - startX;
     const dy = startY - event.clientY;
     if (dy > SWIPE_PX && dy >= Math.abs(dx)) {
@@ -1868,18 +1875,20 @@ function wireUnitGesture(button, unitId) {
   button.addEventListener("pointerup", (event) => {
     clearTimeout(timer);
     button.classList.remove("is-pressing");
-    if (!fired && !longPressed) {
+    if (started && !fired && !longPressed) {
       const action = event.shiftKey ? (event.altKey ? "sbb" : "bb") : "normal";
       fire(action); // タップ=通常 / Shift=BB / Shift+Alt=SBB
     }
+    started = false;
+    try { button.releasePointerCapture(event.pointerId); } catch {}
   });
 
   const cancel = () => {
     clearTimeout(timer);
+    started = false;
     button.classList.remove("is-pressing", "is-charging");
   };
   button.addEventListener("pointercancel", cancel);
-  button.addEventListener("pointerleave", cancel);
   button.addEventListener("contextmenu", (event) => {
     event.preventDefault();
     fire("sbb"); // 右クリック → SBB
@@ -1945,7 +1954,7 @@ function resolvePlayerActions() {
     const friendBreak = activeFriendSkill()?.breakMultiplier || 1;
     const breakDamage = syncClusters.reduce((sum, cluster) => {
       const attacker = state.party.find((unit) => unit.id === cluster[0].attackerId);
-      return sum + 12 * relicProduct(attacker, "breakDamageMultiplier") * friendBreak;
+      return sum + window.COMBAT.strategy.syncBreakDamage * relicProduct(attacker, "breakDamageMultiplier") * friendBreak;
     }, 0);
     state.enemy.break = Math.max(0, state.enemy.break - breakDamage);
   }
@@ -1985,7 +1994,13 @@ function resolvePlayerActions() {
         window.COMBAT.overdriveMax,
         state.overdrive + (isSync ? window.COMBAT.odGainSync : window.COMBAT.odGainHit)
       );
-      if (target === state.enemy) applyHitStatus(unit, isSync, hit.source);
+      if (target === state.enemy) {
+        applyHitStatus(unit, isSync, hit.source);
+        if (result.weak) {
+          // 弱点ヒットは崩しを進める → 属性を合わせるほど大技を崩しやすい。
+          state.enemy.break = Math.max(0, state.enemy.break - window.COMBAT.strategy.weaknessBreakChip);
+        }
+      }
       flashEnemy();
       showHitEffect(isSync);
       showDamage(result.damage, result.crit ? "crit" : isSync ? "sync" : result.weak ? "weak" : "normal");
@@ -2198,10 +2213,17 @@ function startEnemyTurn() {
     }
     if (state.enemy.break <= 0) {
       const cursed = state.enemy.statuses.some((status) => status.type === "curse");
+      const canceledCharge = state.enemy.charged; // 大技詠唱中の崩しはキャンセル成功
       state.enemy.break = cursed ? Math.floor(state.enemy.maxBreak * 0.65) : state.enemy.maxBreak;
       state.enemy.breakVulnerableTurns = 1;
+      state.enemy.charged = false;
+      state.enemy.chargeCounter = 0;
       state.battleStats.breaks += 1;
-      log("敵を崩した。敵は行動不能、味方全体のBBゲージが上昇。");
+      log(
+        canceledCharge
+          ? "崩し成功！ 敵の大技をキャンセルし行動不能に。次ターンは崩し窓(被ダメ+50%)、総攻撃のチャンス。"
+          : "敵を崩した。行動不能＋崩し窓(被ダメ+50%)。味方のBBゲージ上昇。",
+      );
       livingParty().forEach((unit) => gainBurst(unit, 18));
       setTimeout(startNextPlayerTurn, scaleDelay(760));
       render();
@@ -2221,7 +2243,7 @@ function startEnemyTurn() {
       targets.forEach((ally) => {
         const damage = Math.max(
           1,
-          Math.floor((enemyAtk * 1.12 * shockMultiplier - ally.def * 0.18) * guardMultiplier * relicProduct(ally, "damageTakenMultiplier")),
+          Math.floor((enemyAtk * window.COMBAT.strategy.chargedAtkMult * shockMultiplier - ally.def * 0.18) * guardMultiplier * relicProduct(ally, "damageTakenMultiplier")),
         );
         const beforeHp = ally.hp;
         ally.hp = Math.max(0, ally.hp - damage);
@@ -2230,13 +2252,14 @@ function startEnemyTurn() {
         totalDamage += damage;
       });
       state.enemy.charged = false;
-      logMessage = `奥義発動。味方全体に合計${totalDamage}ダメージ。`;
+      state.enemy.chargeCounter = 0;
+      logMessage = `⚡大技発動！ 味方全体に合計${totalDamage}ダメージ。(崩すかガードで対応すべきだった)`;
     } else if (pattern.id === "allBurst") {
       let totalDamage = 0;
       targets.forEach((ally) => {
         const damage = Math.max(
           1,
-          Math.floor((enemyAtk * 0.82 * shockMultiplier - ally.def * 0.28) * guardMultiplier * relicProduct(ally, "damageTakenMultiplier")),
+          Math.floor((enemyAtk * window.COMBAT.strategy.allBurstAtkMult * shockMultiplier - ally.def * 0.28) * guardMultiplier * relicProduct(ally, "damageTakenMultiplier")),
         );
         const beforeHp = ally.hp;
         ally.hp = Math.max(0, ally.hp - damage);
@@ -2276,6 +2299,17 @@ function startEnemyTurn() {
 
     log(logMessage);
     state.fullGuardQueued = false;
+
+    // 大技詠唱の管理: 大技以外で一定回数行動したら次ターンに大技を詠唱(予兆)。
+    // プレイヤーは次の自分のターンで「崩してキャンセル / ガード / 回復」を選ぶ。
+    if (pattern.id !== "overdrive" && !state.enemy.charged) {
+      state.enemy.chargeCounter += 1;
+      if (state.enemy.chargeCounter >= window.COMBAT.strategy.chargeEveryTurns) {
+        state.enemy.charged = true;
+        state.enemy.chargeCounter = 0;
+      }
+    }
+
     render();
 
     if (livingParty().length === 0) {
@@ -2402,6 +2436,9 @@ function fireUbb() {
       });
     });
   });
+  if (state.enemy) {
+    state.enemy.break = Math.max(0, state.enemy.break - window.COMBAT.strategy.ubbBreakDamage);
+  }
   log("⚡ 全軍の力を解き放つ —— アルティメットバースト!");
   shakeScreen(true);
   render();
@@ -2466,8 +2503,12 @@ function renderEnemy() {
   els.breakBanner.classList.toggle("is-active", state.enemy.breakVulnerableTurns > 0);
   const nextPattern = bossPatternForTurn(state.enemy.turn + 1);
   const bigAttackNext = nextPattern.danger;
-  els.enemyIntent.textContent = `次: ${nextPattern.label}`;
-  els.enemyIntent.classList.toggle("is-danger", bigAttackNext);
+  if (state.enemy.charged) {
+    els.enemyIntent.textContent = "⚠ 次: 全体大技！ 崩す/ガードで対応";
+  } else {
+    els.enemyIntent.textContent = `次: ${nextPattern.label}`;
+  }
+  els.enemyIntent.classList.toggle("is-danger", bigAttackNext || state.enemy.charged);
   renderElementalField();
 }
 

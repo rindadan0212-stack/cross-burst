@@ -40,7 +40,19 @@ window.COMBAT = {
   ubbMultiplier: 2.4, // UBB各ヒットの倍率(通常攻撃multiplierに乗算)
 
   // --- 崩し / バリア (break / barrier) ---
-  breakBonus: 1.35, // Break 脆弱中の与ダメージ倍率
+  breakBonus: 1.5, // Break 脆弱中の与ダメージ倍率 (崩し窓に火力を集中させる報酬)
   barrierMatch: 1.22, // ボスバリアの対応属性ヒット
   barrierMiss: 0.62, // ボスバリアの非対応属性ヒット
+
+  // --- 戦略ループ (敵の大技詠唱 → 崩し/ガードで対応) ---
+  strategy: {
+    enemyHpScale: 1.5, // 敵HP倍率。短命だと駆け引きが起きないので延命
+    chargeEveryTurns: 2, // 敵がN回行動するごとに大技を詠唱(予兆)
+    weaknessBreakChip: 4, // 弱点ヒット1発ごとのBreak減少(弱点属性で崩しが早まる)
+    syncBreakDamage: 16, // Sync1クラスタあたりのBreak減少
+    sbbBreakDamage: 34, // SBBのBreak減少(崩しの主力)
+    ubbBreakDamage: 60, // UBBのBreak減少
+    chargedAtkMult: 1.55, // 大技(奥義)の攻撃倍率 — 無対応だとKO級の脅威
+    allBurstAtkMult: 0.95, // 通常の全体攻撃倍率
+  },
 };

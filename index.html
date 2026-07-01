@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="icon" href="data:," />
     <title>召喚継界クロスバースト</title>
-    <link rel="stylesheet" href="src/styles.css?v=20260701j" />
+    <link rel="stylesheet" href="src/styles.css?v=20260701m" />
   </head>
   <body>
     <main class="app-shell">
@@ -92,13 +92,9 @@
 
       <section id="battleView" class="app-view battle-view" hidden>
       <section class="battle-topbar" aria-label="戦闘状況">
-        <div>
-          <p class="eyebrow">クエストバトル</p>
-          <h1>クロスバースト</h1>
-          <div class="skill-strip">
-            <span id="leaderSkillLabel">隊長: -</span>
-            <span id="friendSkillLabel">助っ人: -</span>
-          </div>
+        <div class="skill-strip">
+          <span id="leaderSkillLabel">隊長: -</span>
+          <span id="friendSkillLabel">助っ人: -</span>
         </div>
         <div class="topbar-actions">
           <button id="guardButton" class="chrome-button" type="button" title="全員防御">防御</button>
@@ -127,7 +123,7 @@
           <span>崩し</span>
           <div class="break-line__bar"><b id="enemyBreakFill"></b></div>
         </div>
-        <div id="breakBanner" class="break-banner">崩し成功 追撃補正 x1.35</div>
+        <div id="breakBanner" class="break-banner">崩し窓 被ダメージ +50%</div>
       </div>
 
         <div class="battlefield__status">
@@ -198,7 +194,7 @@
       </section>
     </main>
 
-    <script src="src/combat_config.js?v=20260701j"></script>
-    <script src="src/main.js?v=20260701j"></script>
+    <script src="src/combat_config.js?v=20260701m"></script>
+    <script src="src/main.js?v=20260701m"></script>
   </body>
 </html>

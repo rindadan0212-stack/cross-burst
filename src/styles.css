@@ -305,9 +305,9 @@ body.in-battle .battlefield {
 }
 
 .battle-topbar {
-  min-height: 62px;
+  min-height: 34px;
   border-radius: 8px;
-  padding: 12px;
+  padding: 5px 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -367,8 +367,8 @@ h1 {
 }
 
 .chrome-button {
-  min-width: 72px;
-  height: 42px;
+  min-width: 66px;
+  height: 36px;
   border: 2px solid #0d323b;
   border-radius: 8px;
   color: #09242a;
@@ -381,8 +381,8 @@ h1 {
 }
 
 .icon-button {
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   border: 1px solid rgba(255, 236, 184, 0.28);
   border-radius: 8px;
   color: var(--text);
@@ -423,8 +423,8 @@ h1 {
 .enemy-hud {
   position: relative;
   z-index: 1;
-  margin: 8px;
-  padding: 8px 10px 6px;
+  margin: 6px;
+  padding: 4px 8px 4px;
   border: 1px solid rgba(255, 232, 156, 0.28);
   border-radius: 7px;
   background:
@@ -436,15 +436,15 @@ h1 {
 }
 
 .quest-strip {
-  height: 28px;
-  margin-bottom: 6px;
+  height: 24px;
+  margin-bottom: 3px;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 8px;
   color: #fff4cf;
   text-shadow: 0 2px 0 #000;
-  font-size: 0.76rem;
+  font-size: 0.68rem;
   font-weight: 900;
 }
 
@@ -459,8 +459,8 @@ h1 {
 }
 
 .quest-strip button {
-  min-width: 68px;
-  height: 28px;
+  min-width: 58px;
+  height: 24px;
   border: 2px solid #15334e;
   border-radius: 7px;
   color: #fff;
@@ -472,11 +472,11 @@ h1 {
 }
 
 .enemy-hud__name {
-  min-height: 34px;
+  min-height: 26px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 3px 12px 3px 4px;
+  padding: 2px 12px 2px 4px;
   clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
   background:
     linear-gradient(180deg, #fff4c6, #8e6a35 11%, #1b1412 100%);
@@ -493,13 +493,13 @@ h1 {
 }
 
 .enemy-hud__name strong {
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   text-shadow: 0 2px 0 #000;
 }
 
 .status-rail {
-  min-height: 22px;
-  margin-top: 5px;
+  min-height: 0;
+  margin-top: 3px;
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
@@ -523,8 +523,8 @@ h1 {
 
 .enemy-hud__bar {
   position: relative;
-  height: 18px;
-  margin-top: 7px;
+  height: 15px;
+  margin-top: 4px;
   border: 2px solid #2b1712;
   border-radius: 999px;
   overflow: hidden;
@@ -535,8 +535,8 @@ h1 {
 }
 
 .break-line {
-  height: 20px;
-  margin-top: 4px;
+  height: 16px;
+  margin-top: 3px;
   display: grid;
   grid-template-columns: 42px 1fr;
   align-items: center;
@@ -608,9 +608,9 @@ h1 {
 .battlefield__status {
   position: relative;
   z-index: 1;
-  min-height: 52px;
-  margin: 0 8px;
-  padding: 8px 10px;
+  min-height: 28px;
+  margin: 0 6px;
+  padding: 3px 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -622,19 +622,19 @@ h1 {
 .battlefield__status span {
   display: block;
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.64rem;
 }
 
 .battlefield__status strong {
   color: #fff2ae;
-  font-size: 1.05rem;
+  font-size: 0.88rem;
   text-shadow: 0 2px 0 #000;
 }
 
 .turn-badge {
-  height: 36px;
-  min-width: 92px;
-  padding: 4px 10px;
+  height: 28px;
+  min-width: 82px;
+  padding: 3px 10px;
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
@@ -698,11 +698,11 @@ h1 {
 
 .enemy-sprite {
   position: relative;
-  width: 130px;
+  width: 152px;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
-  margin: 40px auto 0 10px;
+  margin: 24px auto 0 12px;
   filter:
     drop-shadow(0 20px 24px rgba(0, 0, 0, 0.45))
     saturate(1.18);
@@ -714,7 +714,7 @@ h1 {
 }
 
 .enemy-core {
-  width: 94px;
+  width: 112px;
   aspect-ratio: 1;
   border-radius: 46% 54% 48% 52%;
   background:
