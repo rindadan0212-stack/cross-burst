@@ -841,6 +841,7 @@ const state = {
   karma: 420,
   materials: {},
   phase: "player",
+  battleToken: 0,
   turn: 1,
   waveIndex: 0,
   speed: 1,
@@ -942,8 +943,14 @@ function cloneUnit(unit) {
   // 未補正ステを base に保持し、battle 用に型補正を掛ける。
   // sync 時は base を roster へ書き戻すので型の二重適用を防げる。
   const mod = unitTypeMod(unit);
-  const base = { maxHp: unit.maxHp, atk: unit.atk, def: unit.def, rec: unit.rec };
-  const maxHp = Math.round(base.maxHp * mod.hp);
+  // 不正セーブ対策: 欠損ステを最低値でフロアし NaN/0除算を防ぐ
+  const base = {
+    maxHp: unit.maxHp || 1,
+    atk: unit.atk || 1,
+    def: unit.def || 0,
+    rec: unit.rec || 0,
+  };
+  const maxHp = Math.max(1, Math.round(base.maxHp * mod.hp));
   return {
     ...unit,
     base,
@@ -977,7 +984,8 @@ function initializeRoster() {
   }
   // 旧セーブの静的フィールド(名称/フラグ等)を baseUnits に同期する。
   // 進行度(level/exp/rarity/atk/def/rec/maxHp/relicIds)は保持し、識別情報だけ更新。
-  const baseById = new Map(baseUnits.map((unit) => [unit.id, unit]));
+  // baseUnits に加え recruitableUnits も同期対象に含める(加入ユニットの静的定義ドリフト対策)
+  const baseById = new Map([...baseUnits, ...recruitableUnits].map((unit) => [unit.id, unit]));
   state.roster.forEach((unit) => {
     const base = baseById.get(unit.id);
     if (!base) return;
@@ -1321,7 +1329,7 @@ function recruitUnit(unitId) {
   if (!unit || state.roster.some((entry) => entry.id === unitId) || !canPay(unit.cost)) return;
   payCost(unit.cost);
   const { cost, ...unitData } = unit;
-  state.roster.push(unitData);
+  state.roster.push({ ...unitData, rarity: unitData.rarity || 1, maxRarity: unitData.maxRarity || 3 });
   if (state.partyIds.length < PARTY_SIZE) state.partyIds.push(unit.id);
   repairPartyIds();
   saveGame();
@@ -1502,6 +1510,8 @@ function startQuest(questId) {
 
 function resetBattle() {
   repairPartyIds();
+  state.battleToken += 1; // 進行中の全setTimeout(hit/FX/敵ターン)を無効化
+  if (els.damageLayer) els.damageLayer.innerHTML = ""; // 残留FXを掃除
   state.phase = "player";
   state.turn = 1;
   state.waveIndex = 0;
@@ -1622,8 +1632,8 @@ function calculateDamage(unit, multiplier, opts = {}) {
   const critTerm = crit
     ? cfg.critBase + relicSum(unit, "critDamageBonus")
     : cfg.varianceMin + Math.random() * (cfg.varianceMax - cfg.varianceMin);
-  // Break 脆弱
-  const breakTerm = state.enemy.breakVulnerableTurns > 0 ? cfg.breakBonus : 1;
+  // Break 脆弱 (本敵のみ。サブ敵狙い時に本敵の脆弱が乗るのを防ぐ)
+  const breakTerm = target === state.enemy && state.enemy.breakVulnerableTurns > 0 ? cfg.breakBonus : 1;
   // ボスの属性バリア
   let barrierTerm = 1;
   if (target === state.enemy && state.enemy.barrierElement) {
@@ -1994,8 +2004,10 @@ function resolvePlayerActions() {
     setTimeout(() => showSync(cluster.length), scaleDelay(cluster[0].hitTimeMs + index * 40));
   });
 
+  const token = state.battleToken;
   hits.forEach((hit) => {
     setTimeout(() => {
+      if (token !== state.battleToken) return; // wave遷移/撃破/リセットで無効化
       const unit = state.party.find((entry) => entry.id === hit.attackerId);
       const target = currentTarget();
       if (!unit || !target || target.hp <= 0) return;
@@ -2041,12 +2053,14 @@ function resolvePlayerActions() {
 
   const endDelay = Math.max(...hits.map((hit) => hit.hitTimeMs)) + 760;
   setTimeout(() => {
-    if (state.enemy.hp > 0) startEnemyTurn();
+    if (token !== state.battleToken) return;
+    if (state.phase === "resolve" && state.enemy.hp > 0) startEnemyTurn();
   }, scaleDelay(endDelay));
 }
 
 function handleEnemyDefeated(source) {
   if (state.phase === "waveClear" || state.phase === "win") return;
+  state.battleToken += 1; // 撃破時点で現resolveの保留タイマー(残hit/endDelay)を無効化
   collectDrop(state.enemy.drop);
 
   if (state.waveIndex >= activeQuest().waves.length - 1) {
@@ -2057,7 +2071,10 @@ function handleEnemyDefeated(source) {
   state.phase = "waveClear";
   log(`${state.enemy.name}を撃破。次の戦闘へ進みます。`);
   render();
-  setTimeout(advanceWave, scaleDelay(900));
+  const token = state.battleToken;
+  setTimeout(() => {
+    if (token === state.battleToken) advanceWave();
+  }, scaleDelay(900));
 }
 
 function collectDrop(dropName) {
@@ -2209,12 +2226,14 @@ function scaleDelay(ms) {
 }
 
 function startEnemyTurn() {
+  const token = state.battleToken;
   state.phase = "enemy";
   state.enemy.turn += 1;
   render();
   log("敵のターン。");
 
   setTimeout(() => {
+    if (token !== state.battleToken) return; // リセット/離脱で無効化
     if (state.enemy.hp <= 0) return;
     tickEnemyStatuses();
     if (state.enemy.hp <= 0) {
@@ -2238,7 +2257,9 @@ function startEnemyTurn() {
           : "敵を崩した。行動不能＋崩し窓(被ダメ+50%)。味方のBBゲージ上昇。",
       );
       livingParty().forEach((unit) => gainBurst(unit, 18));
-      setTimeout(startNextPlayerTurn, scaleDelay(760));
+      setTimeout(() => {
+        if (token === state.battleToken) startNextPlayerTurn();
+      }, scaleDelay(760));
       render();
       return;
     }
@@ -2332,7 +2353,9 @@ function startEnemyTurn() {
       return;
     }
 
-    setTimeout(startNextPlayerTurn, scaleDelay(660));
+    setTimeout(() => {
+      if (token === state.battleToken) startNextPlayerTurn();
+    }, scaleDelay(660));
   }, scaleDelay(640));
 }
 
