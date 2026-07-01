@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="icon" href="data:," />
     <title>召喚継界クロスバースト</title>
-    <link rel="stylesheet" href="src/styles.css?v=20260701r" />
+    <link rel="stylesheet" href="src/styles.css?v=20260701t" />
   </head>
   <body>
     <main class="app-shell">
@@ -23,8 +23,8 @@
           </div>
           <div class="home-stats">
             <div><span>召喚位</span><strong id="homeRank">12</strong></div>
-            <div><span>体力</span><strong id="homeEnergy">24/30</strong></div>
             <div><span>ゼル</span><strong id="homeGold">0</strong></div>
+            <div><span>カルマ</span><strong id="homeKarma">0</strong></div>
           </div>
         </div>
         <div class="home-actions">
@@ -46,7 +46,7 @@
         <div class="quest-card">
           <div>
             <strong>第一継層 ミストラ：門を守る影</strong>
-            <span>3戦 / 樹・雷・影 / 体力 8</span>
+            <span>3戦 / 樹・雷・影</span>
             <small id="shrineMissionHint">達成条件: -</small>
           </div>
           <button id="startQuestButton" type="button">出撃</button>
@@ -152,6 +152,7 @@
               <div id="enemyIntent" class="enemy-intent">次: 斬撃</div>
               <div id="enemySprite" class="enemy-sprite">
                 <div class="enemy-core"></div>
+                <span class="enemy-face" id="enemyFace">👾</span>
               </div>
             </div>
             <div class="ally-side" aria-hidden="true">
@@ -203,7 +204,7 @@
       </section>
     </main>
 
-    <script src="src/combat_config.js?v=20260701r"></script>
-    <script src="src/main.js?v=20260701r"></script>
+    <script src="src/combat_config.js?v=20260701t"></script>
+    <script src="src/main.js?v=20260701t"></script>
   </body>
 </html>

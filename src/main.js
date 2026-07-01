@@ -24,6 +24,25 @@ const roleLabels = {
   sync: "同期",
 };
 
+// キャラ絵の暫定代用 (絵文字)。後でドット絵/立ち絵に差し替え予定。
+const UNIT_ICON = {
+  "flame-sword": "🗡️",
+  "tide-mage": "🔱",
+  "grove-guard": "🛡️",
+  "volt-archer": "🏹",
+  "star-seer": "🔮",
+  "shade-friend": "🥷",
+};
+const ROLE_ICON = { attack: "⚔️", heal: "✨", guard: "🛡️", charge: "🏹", sync: "🔮" };
+const ENEMY_ICON = { flame: "🐲", tide: "🦑", grove: "🐛", volt: "🦅", star: "👼", shade: "👹" };
+
+function unitIcon(unit) {
+  return (unit && UNIT_ICON[unit.id]) || ROLE_ICON[unit && unit.role] || "🌟";
+}
+function enemyIcon(enemy) {
+  return ENEMY_ICON[enemy && enemy.element] || "👾";
+}
+
 // ユニットタイプ (本家の Lord/Anima/Breaker/Guardian/Oracle 相当)。
 // ステータスに乗算補正を掛ける。Lord は均衡(補正なし)。
 const UNIT_TYPES = {
@@ -817,8 +836,6 @@ const state = {
   roster: [],
   partyIds: [],
   rank: 12,
-  energy: 24,
-  maxEnergy: 30,
   questRecords: {},
   gold: 1600,
   karma: 420,
@@ -866,6 +883,7 @@ const els = {
   breakBanner: document.querySelector("#breakBanner"),
   enemyName: document.querySelector("#enemyName"),
   enemyElement: document.querySelector("#enemyElement"),
+  enemyFace: document.querySelector("#enemyFace"),
   enemyIntent: document.querySelector("#enemyIntent"),
   areaLabel: document.querySelector("#areaLabel"),
   statusRail: document.querySelector("#statusRail"),
@@ -891,7 +909,7 @@ const els = {
   navButtons: document.querySelectorAll("[data-view-target]"),
   views: document.querySelectorAll(".app-view"),
   homeRank: document.querySelector("#homeRank"),
-  homeEnergy: document.querySelector("#homeEnergy"),
+  homeKarma: document.querySelector("#homeKarma"),
   homeGold: document.querySelector("#homeGold"),
   saveStatus: document.querySelector("#saveStatus"),
   materialQuestCard: document.querySelector("#materialQuestCard"),
@@ -1010,8 +1028,6 @@ function saveGame() {
     roster: state.roster,
     partyIds: state.partyIds,
     rank: state.rank,
-    energy: state.energy,
-    maxEnergy: state.maxEnergy,
     questRecords: state.questRecords,
     gold: state.gold,
     karma: state.karma,
@@ -1034,8 +1050,6 @@ function loadGame() {
     state.roster = payload.roster || [];
     state.partyIds = payload.partyIds || state.roster.slice(0, 6).map((unit) => unit.id);
     state.rank = payload.rank ?? state.rank;
-    state.energy = payload.energy ?? state.energy;
-    state.maxEnergy = payload.maxEnergy ?? state.maxEnergy;
     state.questRecords = payload.questRecords || {};
     state.gold = payload.gold ?? state.gold;
     state.karma = payload.karma ?? state.karma;
@@ -1071,8 +1085,8 @@ function showView(viewId) {
 
 function renderHome() {
   els.homeRank.textContent = state.rank;
-  els.homeEnergy.textContent = `${state.energy}/${state.maxEnergy}`;
   els.homeGold.textContent = state.gold;
+  if (els.homeKarma) els.homeKarma.textContent = state.karma;
   renderQuestUnlocks();
 }
 
@@ -1098,7 +1112,7 @@ function renderExtraQuests() {
         <article class="quest-card ${unlocked ? "" : "quest-card--locked"}">
           <div>
             <strong>${quest.area}: ${quest.name}</strong>
-            <span>${quest.waves.length}戦 / ${elements} / 体力 ${quest.energyCost}</span>
+            <span>${quest.waves.length}戦 / ${elements}</span>
             <small>${unlocked ? missionSummary(questId) : `${questDefinitions[quest.unlockAfter]?.name || "前のクエスト"} クリアで解放`}</small>
           </div>
           <button type="button" data-start-quest="${questId}" ${unlocked ? "" : "disabled"}>${unlocked ? "出撃" : "未解放"}</button>
@@ -1473,15 +1487,8 @@ function currentTarget() {
   return state.enemy;
 }
 
+// 体力(エナジー)システムは廃止。出撃は常に可能。
 function spendQuestEnergy() {
-  const quest = activeQuest();
-  if (state.energy < quest.energyCost) {
-    if (els.saveStatus) els.saveStatus.textContent = `体力不足: ${quest.energyCost}必要`;
-    showView("homeView");
-    return false;
-  }
-  state.energy -= quest.energyCost;
-  renderHome();
   return true;
 }
 
@@ -1734,6 +1741,7 @@ function queueBurst(unit, useSbb) {
   unit.burst -= isSbb ? 200 : 100;
   unit.ready = false;
   state.actedUnitIds.add(unit.id);
+  flashScreen(ELEMENT_HEX[unit.element] || "rgba(120,200,255,0.6)", isSbb); // バースト発動フラッシュ
   if (isSbb) shakeScreen(false); // SBB は一段強い演出
 
   if (unit.burstType === "damage") {
@@ -2008,10 +2016,12 @@ function resolvePlayerActions() {
       }
       flashEnemy();
       showHitEffect(isSync);
+      spawnImpact(isSync);
       showDamage(result.damage, result.crit ? "crit" : isSync ? "sync" : result.weak ? "weak" : "normal");
       if (result.crit) {
         triggerHitstop();
         shakeScreen(false);
+        flashScreen("rgba(255,220,120,0.5)", false);
       }
       if (target === state.enemy) checkEnemyHpTriggers();
       render();
@@ -2080,8 +2090,6 @@ function completeQuest(source) {
   state.gold += state.rewards.gold;
   state.karma += state.rewards.karma;
   state.rank += 1;
-  state.maxEnergy = 30 + Math.floor(state.rank / 3) * 2;
-  state.energy = Math.min(state.maxEnergy, state.energy + 4);
   if (state.activeQuestId === "shrine" && !state.unlockedQuests.includes("material")) {
     state.unlockedQuests.push("material");
   }
@@ -2406,6 +2414,49 @@ function flashEnemy() {
   setTimeout(() => els.enemySprite.classList.remove("is-hit", "flash"), 170);
 }
 
+const ELEMENT_HEX = {
+  flame: "#ff6a3a",
+  tide: "#53ccff",
+  grove: "#76dc5a",
+  volt: "#ffe750",
+  star: "#fff2b6",
+  shade: "#b27eff",
+};
+
+// 画面全体を一瞬フラッシュさせるFX (バースト/UBB/クリ用)
+function flashScreen(color, strong) {
+  const layer = els.battlefield;
+  if (!layer) return;
+  const f = document.createElement("div");
+  f.className = "battle-flash" + (strong ? " is-strong" : "");
+  f.style.background = `radial-gradient(circle at 50% 46%, ${color}, transparent 62%)`;
+  layer.appendChild(f);
+  setTimeout(() => f.remove(), strong ? 440 : 260);
+}
+
+// 着弾FX: インパクトリング + (Sync時に)スパーク粒子を飛ばす
+function spawnImpact(isSync) {
+  const x = 34 + Math.random() * 20;
+  const y = 38 + Math.random() * 16;
+  const ring = document.createElement("div");
+  ring.className = "impact-ring" + (isSync ? " is-sync" : "");
+  ring.style.left = `${x}%`;
+  ring.style.top = `${y}%`;
+  els.damageLayer.appendChild(ring);
+  setTimeout(() => ring.remove(), 380);
+  const n = isSync ? 6 : 3;
+  for (let i = 0; i < n; i += 1) {
+    const p = document.createElement("div");
+    p.className = "spark-p" + (isSync ? " is-sync" : "");
+    p.style.left = `${x}%`;
+    p.style.top = `${y}%`;
+    p.style.setProperty("--dx", `${-40 + Math.random() * 80}px`);
+    p.style.setProperty("--dy", `${-46 + Math.random() * 40}px`);
+    els.damageLayer.appendChild(p);
+    setTimeout(() => p.remove(), 480);
+  }
+}
+
 function renderOverdrive() {
   if (!els.overdriveBar) return;
   const max = window.COMBAT.overdriveMax;
@@ -2445,6 +2496,7 @@ function fireUbb() {
     state.enemy.break = Math.max(0, state.enemy.break - window.COMBAT.strategy.ubbBreakDamage);
   }
   log("⚡ 全軍の力を解き放つ —— アルティメットバースト!");
+  flashScreen("rgba(255,240,200,0.8)", true);
   shakeScreen(true);
   render();
   resolvePlayerActions();
@@ -2494,6 +2546,7 @@ function renderEnemy() {
   els.enemyName.textContent = state.enemy.name;
   els.enemyElement.textContent = ELEMENT_LABELS[state.enemy.element];
   els.enemyElement.className = `element element--${state.enemy.element}`;
+  if (els.enemyFace) els.enemyFace.textContent = enemyIcon(state.enemy);
   const enemyChips = state.enemy.statuses.map((status) => `<span class="status-chip status-chip--${status.type}">${statusLabels[status.type]} ${status.turns}</span>`);
   if (state.enemy.barrierElement) enemyChips.push(`<span class="status-chip">${ELEMENT_LABELS[state.enemy.barrierElement]}障壁 ${state.enemy.barrierTurns}</span>`);
   if (state.enemy.atkMultiplier > 1) enemyChips.push(`<span class="status-chip status-chip--burn">怒り</span>`);
@@ -2638,7 +2691,10 @@ function renderParty() {
     const burstReadyCls = unit.burst >= 200 ? "is-sbb" : unit.burst >= 100 ? "is-bb" : "";
     // ブレフロ準拠の大型パネル: ポートレート | 名前 / HP数値+バー / BBラベル + BBゲージ
     button.innerHTML = `
-      <span class="unit-card__portrait element--${unit.element}">${ELEMENT_LABELS[unit.element]}</span>
+      <span class="unit-card__portrait element--${unit.element}">
+        <span class="unit-card__face">${unitIcon(unit)}</span>
+        <span class="unit-card__elem">${ELEMENT_LABELS[unit.element]}</span>
+      </span>
       <div class="unit-card__body">
         <div class="unit-card__name">${unit.name}</div>
         <div class="unit-card__hp"><b>HP</b> ${Math.max(0, unit.hp)}/${unit.maxHp}</div>
