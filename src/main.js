@@ -238,9 +238,77 @@ function activeSpNodeDefs(unit) {
 function spSpent(unit) {
   return activeSpNodeDefs(unit).reduce((sum, def) => sum + def.cost, 0);
 }
-// 戦闘に効く効果源 = スフィア + 有効なSPノード。
+
+// ── 編成シナジー (軸B: 編成をパズル化) ─────────────────────────────
+// パーティ構成が条件を満たすと全体に効く「陣」。効果キーはスフィア/SPと共通なので
+// unitEffects に合流させるだけで combat 無改変・全体適用。条件は互いに両立しにくく
+// (統一 vs 五色、攻撃特化 vs 均衡) 編成のトレードオフになる。
+function countBy(list, key) {
+  const map = {};
+  list.forEach((item) => {
+    const v = item[key];
+    if (v != null) map[v] = (map[v] || 0) + 1;
+  });
+  return map;
+}
+
+const PARTY_SYNERGIES = [
+  {
+    id: "elementFocus",
+    label: "偏成の陣",
+    cond: "同属性を4体以上",
+    damageMultiplier: 1.12,
+    test: (p) => Object.values(countBy(p, "element")).some((n) => n >= 4),
+  },
+  {
+    id: "rainbow",
+    label: "五色の陣",
+    cond: "5属性以上を混成",
+    bcDropBonus: 0.08,
+    burstGainMultiplier: 1.1,
+    test: (p) => new Set(p.map((u) => u.element)).size >= 5,
+  },
+  {
+    id: "balanced",
+    label: "均衡の陣",
+    cond: "攻撃・回復・(守護/充填)を揃える",
+    damageTakenMultiplier: 0.9,
+    test: (p) => {
+      const roles = new Set(p.map((u) => u.role));
+      return roles.has("attack") && roles.has("heal") && (roles.has("guard") || roles.has("charge"));
+    },
+  },
+  {
+    id: "combo",
+    label: "連手の陣",
+    cond: "同期/充填を2体以上",
+    syncMultiplier: 1.12,
+    syncWindowBonusMs: 10,
+    test: (p) => p.filter((u) => u.role === "sync" || u.role === "charge").length >= 2,
+  },
+  {
+    id: "typeUnity",
+    label: "型統一の陣",
+    cond: "同じ型を3体以上",
+    critRateBonus: 0.06,
+    test: (p) => Object.values(countBy(p, "type")).some((n) => n >= 3),
+  },
+];
+
+function activePartySynergyDefs(party = state.party) {
+  if (!party || party.length === 0) return [];
+  return PARTY_SYNERGIES.filter((syn) => {
+    try {
+      return syn.test(party);
+    } catch {
+      return false;
+    }
+  });
+}
+
+// 戦闘に効く効果源 = スフィア + 有効なSPノード + 発動中の編成シナジー(全体)。
 function unitEffects(unit) {
-  return [...unitRelics(unit), ...activeSpNodeDefs(unit)];
+  return [...unitRelics(unit), ...activeSpNodeDefs(unit), ...activePartySynergyDefs()];
 }
 
 const recruitableUnits = [
@@ -953,6 +1021,7 @@ const els = {
   homeGold: document.querySelector("#homeGold"),
   spPanel: document.querySelector("#spPanel"),
   spTitle: document.querySelector("#spTitle"),
+  partySynergy: document.querySelector("#partySynergy"),
   saveStatus: document.querySelector("#saveStatus"),
   materialQuestCard: document.querySelector("#materialQuestCard"),
   materialQuestHint: document.querySelector("#materialQuestHint"),
@@ -1195,7 +1264,38 @@ function unitSummary(unit) {
   return `${unitTypeMod(unit).label} / Lv ${unit.level} / 星${unit.rarity || 1} / 体力 ${unit.maxHp} / 攻撃 ${unit.atk} / スフィア ${(unit.relicIds || []).filter(Boolean).length}`;
 }
 
+function currentRosterParty() {
+  return state.partyIds.map((id) => state.roster.find((u) => u.id === id)).filter(Boolean);
+}
+
+function renderPartySynergy() {
+  if (!els.partySynergy) return;
+  const party = currentRosterParty();
+  const active = new Set(activePartySynergyDefs(party).map((syn) => syn.id));
+  const elems = new Set(party.map((unit) => unit.element));
+  const coverage = Object.keys(ELEMENT_LABELS)
+    .map((e) => `<span class="cov ${elems.has(e) ? "is-on" : ""}">${ELEMENT_LABELS[e]}</span>`)
+    .join("");
+  const rows = PARTY_SYNERGIES.map((syn) => {
+    const on = active.has(syn.id);
+    return `
+      <div class="syn-row ${on ? "is-on" : ""}">
+        <div class="syn-row__main"><b>${syn.label}</b><small>${syn.cond}</small></div>
+        <span class="syn-row__eff">${sphereEffectText(syn)}</span>
+      </div>`;
+  }).join("");
+  els.partySynergy.innerHTML = `
+    <div class="synergy-head">
+      <strong>編成シナジー ${active.size}/${PARTY_SYNERGIES.length}</strong>
+      <div class="cov-row" title="属性カバー(敵の弱点を突ける)">${coverage}</div>
+    </div>
+    <p class="synergy-hint">構成で「陣」が発動＝全体強化。統一と五色は両立しない＝編成の駆け引き。</p>
+    <div class="syn-list">${rows}</div>
+  `;
+}
+
 function renderUnitList() {
+  renderPartySynergy();
   els.unitList.innerHTML = state.roster
     .map(
       (unit) => {
