@@ -659,7 +659,7 @@ const baseUnits = [
 
 const questDefinitions = {
   shrine: {
-  area: "AREA 1-4",
+  area: "第一継層 ミストラ",
   name: "崩れた神殿",
   energyCost: 8,
   baseGold: 1240,
@@ -703,7 +703,7 @@ const questDefinitions = {
   ],
   },
   material: {
-    area: "裂界 1",
+    area: "継界の裂け目",
     name: "素材の裂け目",
     energyCost: 6,
     baseGold: 680,
@@ -737,7 +737,7 @@ const questDefinitions = {
     ],
   },
   highlands: {
-    area: "AREA 2-1",
+    area: "第二継層 雷鳴の高地",
     name: "雷鳴の高地",
     energyCost: 9,
     baseGold: 1480,
@@ -755,7 +755,7 @@ const questDefinitions = {
     ],
   },
   waterway: {
-    area: "AREA 2-2",
+    area: "第二継層 潮硝子の水路",
     name: "潮硝子の水路",
     energyCost: 9,
     baseGold: 1520,
@@ -773,7 +773,7 @@ const questDefinitions = {
     ],
   },
   groveDepths: {
-    area: "AREA 2-3",
+    area: "第二継層 樹海の深部",
     name: "深樹の底",
     energyCost: 10,
     baseGold: 1620,
@@ -791,7 +791,7 @@ const questDefinitions = {
     ],
   },
   eclipseGate: {
-    area: "AREA 3-1",
+    area: "第三継層 蝕の門",
     name: "蝕の門",
     energyCost: 12,
     baseGold: 1880,
