@@ -2494,10 +2494,11 @@ function startEnemyTurn() {
       state.battleStats.breaks += 1;
       log(
         canceledCharge
-          ? "崩し成功！ 敵の大技をキャンセルし行動不能に。次ターンは崩し窓(被ダメ+50%)、総攻撃のチャンス。"
+          ? "崩し成功！ 大技をキャンセル＋行動不能。崩し窓(被ダメ+50%)＋BB大量上昇 — 溜めたSBB/UBBを叩き込め！"
           : "敵を崩した。行動不能＋崩し窓(被ダメ+50%)。味方のBBゲージ上昇。",
       );
-      livingParty().forEach((unit) => gainBurst(unit, 18));
+      // 大技キャンセルは特に大きなBB報酬 → 直後の崩し窓で一気に叩き込む setup→payoff
+      livingParty().forEach((unit) => gainBurst(unit, canceledCharge ? 32 : 18));
       setTimeout(() => {
         if (token === state.battleToken) startNextPlayerTurn();
       }, scaleDelay(760));
@@ -2806,6 +2807,16 @@ function phaseLabel() {
   return state.phase;
 }
 
+// 大技を「無対応で受けたら」の推定ダメージ(全体・1体あたり)。予兆の判断材料に表示。
+function estimateBigMoveDamage() {
+  const party = livingParty();
+  if (party.length === 0) return 0;
+  const enemyAtk = state.enemy.atk * (state.enemy.atkMultiplier || 1);
+  const avgDef = party.reduce((sum, unit) => sum + unit.def, 0) / party.length;
+  const raw = enemyAtk * window.COMBAT.strategy.chargedAtkMult - avgDef * 0.18;
+  return Math.max(1, Math.round(raw));
+}
+
 function renderEnemy() {
   els.enemyName.textContent = state.enemy.name;
   els.enemyElement.textContent = ELEMENT_LABELS[state.enemy.element];
@@ -2822,15 +2833,22 @@ function renderEnemy() {
   els.sideEnemyButton.hidden = !state.sideEnemy || state.sideEnemy.hp <= 0;
   els.sideEnemyButton.classList.toggle("is-targeted", state.targetSlot === "side");
   els.enemySprite.classList.toggle("is-targeted", state.targetSlot === "main");
-  els.breakBanner.classList.toggle("is-active", state.enemy.breakVulnerableTurns > 0);
+  const inWindow = state.enemy.breakVulnerableTurns > 0;
+  els.breakBanner.classList.toggle("is-active", inWindow);
+  if (inWindow) els.breakBanner.textContent = "崩し窓 被ダメ+50% — 今こそ総攻撃";
   const nextPattern = bossPatternForTurn(state.enemy.turn + 1);
   const bigAttackNext = nextPattern.danger;
-  if (state.enemy.charged) {
-    els.enemyIntent.textContent = "⚠ 次: 全体大技！ 崩す/ガードで対応";
+  if (inWindow) {
+    // 崩し窓: 温存したバーストを叩き込むよう促す (setup→payoff の payoff 側)
+    els.enemyIntent.textContent = "💥 崩し窓！今叩き込め";
+  } else if (state.enemy.charged) {
+    // 大技詠唱: 崩す/ガード/耐える を判断できる推定ダメージを提示
+    els.enemyIntent.textContent = `⚠ 大技 全体約${estimateBigMoveDamage()}／崩す・守・耐`;
   } else {
     els.enemyIntent.textContent = `次: ${nextPattern.label}`;
   }
-  els.enemyIntent.classList.toggle("is-danger", bigAttackNext || state.enemy.charged);
+  els.enemyIntent.classList.toggle("is-danger", (bigAttackNext || state.enemy.charged) && !inWindow);
+  els.enemyIntent.classList.toggle("is-window", inWindow);
   renderElementalField();
 }
 
