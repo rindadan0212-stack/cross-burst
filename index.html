@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="icon" href="data:," />
     <title>召喚継界クロスバースト</title>
-    <link rel="stylesheet" href="src/styles.css?v=20260701u" />
+    <link rel="stylesheet" href="src/styles.css?v=20260701v" />
   </head>
   <body>
     <main class="app-shell">
@@ -82,6 +82,17 @@
           </div>
         </div>
         <div id="powerList" class="unit-list"></div>
+      </section>
+
+      <section id="spView" class="app-view menu-view" hidden>
+        <div class="menu-header">
+          <button type="button" class="back-button" data-view-target="powerView" aria-label="強化へ戻る">‹ 強化</button>
+          <div class="menu-header__text">
+            <p class="eyebrow">SPスキルカスタム</p>
+            <h2 id="spTitle">ビルド編集</h2>
+          </div>
+        </div>
+        <div id="spPanel" class="sp-panel"></div>
       </section>
 
       <section id="exchangeView" class="app-view menu-view" hidden>
@@ -204,7 +215,7 @@
       </section>
     </main>
 
-    <script src="src/combat_config.js?v=20260701u"></script>
-    <script src="src/main.js?v=20260701u"></script>
+    <script src="src/combat_config.js?v=20260701v"></script>
+    <script src="src/main.js?v=20260701v"></script>
   </body>
 </html>

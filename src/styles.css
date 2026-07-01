@@ -429,6 +429,153 @@ body.in-battle .battlefield {
   filter: grayscale(0.75) brightness(0.65);
 }
 
+.sp-open {
+  border-color: rgba(120, 200, 255, 0.55) !important;
+  color: #bfe6ff !important;
+}
+
+/* ── SPスキルカスタム画面 ── */
+.sp-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 2px;
+}
+
+.sp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sp-budget {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.sp-budget span {
+  font-size: 0.68rem;
+  color: var(--muted);
+  letter-spacing: 0.18em;
+}
+
+.sp-budget strong {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  color: var(--gold-lt);
+  line-height: 1;
+}
+
+.sp-budget small {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.sp-reset {
+  min-height: 32px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 238, 181, 0.3);
+  border-radius: 8px;
+  background: #31281f;
+  color: var(--text);
+  font-weight: 800;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.sp-hint {
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.sp-branch {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sp-branch__title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.84rem;
+  letter-spacing: 0.1em;
+  padding-left: 9px;
+  border-left: 3px solid var(--gold);
+}
+
+.sp-branch--burst {
+  border-left-color: #ff6a3a;
+  color: #ffb59a;
+}
+
+.sp-branch--chain {
+  border-left-color: #53ccff;
+  color: #bfe6ff;
+}
+
+.sp-branch--ward {
+  border-left-color: #76dc5a;
+  color: #c3f0b3;
+}
+
+.sp-branch__nodes {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.sp-node {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 238, 181, 0.16);
+  border-radius: 8px;
+  background: #241d16;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.sp-node.is-active {
+  border-color: var(--gold);
+  background: #3a2f1f;
+  box-shadow: inset 0 0 0 1px rgba(255, 220, 150, 0.35);
+}
+
+.sp-node:disabled {
+  cursor: default;
+  filter: grayscale(0.7) brightness(0.62);
+}
+
+.sp-node__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sp-node__head b {
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.sp-node__cost {
+  font-size: 0.64rem;
+  color: var(--gold-lt);
+  font-weight: 800;
+}
+
+.sp-node__eff {
+  font-size: 0.68rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
 .battle-topbar,
 .party-panel,
 .battlefield {

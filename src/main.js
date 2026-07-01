@@ -205,6 +205,44 @@ function sphereEffectText(def) {
   return parts.join(" ");
 }
 
+// ── SPスキルカスタム (育成の横展開) ─────────────────────────────
+// 予算制でトグルする「挙動を変える」ノード。効果キーはスフィアと共通なので
+// combat 側は無改変で相互作用する (relicProduct/relicSum が集約)。
+// 3系統×各3ノード。全ノードは取れない(予算制)ので「爆発 vs 連携 vs 守勢」で悩む。
+const SP_BRANCHES = { burst: "爆発", chain: "連携", ward: "守勢" };
+const SP_NODES = {
+  // 爆発系: 火力・クリ・崩し (瞬間火力に寄せる)
+  spCrit: { label: "連命開眼", branch: "burst", cost: 3, critRateBonus: 0.1, critDamageBonus: 0.35 },
+  spPower: { label: "剛撃の型", branch: "burst", cost: 3, damageMultiplier: 1.12 },
+  spBreak: { label: "崩牙", branch: "burst", cost: 3, breakDamageMultiplier: 1.3 },
+  // 連携系: ゲージ回転・Spark (手数と連携に寄せる)
+  spSpark: { label: "連火の呼吸", branch: "chain", cost: 3, syncMultiplier: 1.14, syncWindowBonusMs: 14 },
+  spGauge: { label: "高回転", branch: "chain", cost: 3, burstGainMultiplier: 1.22 },
+  spDrop: { label: "結晶親和", branch: "chain", cost: 2, bcDropBonus: 0.12 },
+  // 守勢系: 耐久・回復 (生存と支援に寄せる)
+  spGuard: { label: "堅守", branch: "ward", cost: 3, damageTakenMultiplier: 0.88 },
+  spHeal: { label: "癒力", branch: "ward", cost: 2, healingMultiplier: 1.2 },
+  spBulwark: { label: "鉄壁", branch: "ward", cost: 4, damageTakenMultiplier: 0.8 },
+};
+
+// SP予算はレベルで増える → 育成(Lv)がビルドの深さに直結する。
+function spBudget(unit) {
+  return 6 + Math.floor((unit.level || 1) / 3);
+}
+function activeSpNodeIds(unit) {
+  return (unit && Array.isArray(unit.spNodes) ? unit.spNodes : []).filter((id) => SP_NODES[id]);
+}
+function activeSpNodeDefs(unit) {
+  return activeSpNodeIds(unit).map((id) => SP_NODES[id]);
+}
+function spSpent(unit) {
+  return activeSpNodeDefs(unit).reduce((sum, def) => sum + def.cost, 0);
+}
+// 戦闘に効く効果源 = スフィア + 有効なSPノード。
+function unitEffects(unit) {
+  return [...unitRelics(unit), ...activeSpNodeDefs(unit)];
+}
+
 const recruitableUnits = [
   {
     id: "star-lancer",
@@ -842,6 +880,7 @@ const state = {
   materials: {},
   phase: "player",
   battleToken: 0,
+  spUnitId: null,
   turn: 1,
   waveIndex: 0,
   speed: 1,
@@ -912,6 +951,8 @@ const els = {
   homeRank: document.querySelector("#homeRank"),
   homeKarma: document.querySelector("#homeKarma"),
   homeGold: document.querySelector("#homeGold"),
+  spPanel: document.querySelector("#spPanel"),
+  spTitle: document.querySelector("#spTitle"),
   saveStatus: document.querySelector("#saveStatus"),
   materialQuestCard: document.querySelector("#materialQuestCard"),
   materialQuestHint: document.querySelector("#materialQuestHint"),
@@ -1003,6 +1044,18 @@ function initializeRoster() {
   // 型未設定(旧セーブ/加入ユニット)にロール基準で型を割り当てる。
   state.roster.forEach((unit) => {
     if (!unit.type || !UNIT_TYPES[unit.type]) unit.type = ROLE_TYPE[unit.role] || "lord";
+    // SPノード: 無効id除去 + 予算超過分を末尾から落とす(定義変更やLv低下に強く)
+    if (!Array.isArray(unit.spNodes)) unit.spNodes = [];
+    unit.spNodes = unit.spNodes.filter((id) => SP_NODES[id]);
+    let spLeft = spBudget(unit);
+    unit.spNodes = unit.spNodes.filter((id) => {
+      const c = SP_NODES[id].cost;
+      if (c <= spLeft) {
+        spLeft -= c;
+        return true;
+      }
+      return false;
+    });
     // スフィア整合性: 2スロット固定(null許容)・無効id除去・同カテゴリ重複除去。
     const seenCat = new Set();
     const raw = unit.relicIds || [];
@@ -1088,6 +1141,7 @@ function showView(viewId) {
   if (viewId === "questView") renderQuestUnlocks();
   if (viewId === "unitsView") renderUnitList();
   if (viewId === "powerView") renderPowerList();
+  if (viewId === "spView") renderSpPanel();
   if (viewId === "exchangeView") renderExchange();
 }
 
@@ -1203,12 +1257,14 @@ function renderPowerList() {
             <span class="unit-list__meta">経験 ${unit.exp}/${expToNext(unit.level)}</span>
             <span class="unit-list__meta">スフィア枠1: ${slotLabel(unit, 0)}</span>
             <span class="unit-list__meta">スフィア枠2: ${slotLabel(unit, 1)}</span>
+            <span class="unit-list__meta">SPビルド: ${spSummary(unit)}</span>
             <span class="unit-list__cost">${training.detail}</span>
             <span class="unit-list__cost ${evolution.ready ? "" : "is-missing"}">${evolution.detail}</span>
           </div>
           <div class="unit-list__actions">
             <button type="button" data-train-unit="${unit.id}" ${training.ready ? "" : "disabled"} title="${training.detail}">訓練</button>
             <button type="button" data-evolve-unit="${unit.id}" ${evolution.ready ? "" : "disabled"} title="${evolution.detail}">進化</button>
+            <button type="button" class="sp-open" data-sp-unit="${unit.id}" title="SPスキルカスタム">SP強化</button>
             <button type="button" data-relic-slot="0" data-relic-unit="${unit.id}">枠1: ${slotShort(unit, 0)}</button>
             <button type="button" data-relic-slot="1" data-relic-unit="${unit.id}">枠2: ${slotShort(unit, 1)}</button>
           </div>
@@ -1346,6 +1402,91 @@ function wirePowerButtons() {
   document.querySelectorAll("[data-relic-slot]").forEach((button) => {
     button.addEventListener("click", () => cycleRelicSlot(button.dataset.relicUnit, Number(button.dataset.relicSlot)));
   });
+  document.querySelectorAll("[data-sp-unit]").forEach((button) => {
+    button.addEventListener("click", () => openSpView(button.dataset.spUnit));
+  });
+}
+
+// ── SPスキルカスタム画面 ─────────────────────────────
+function spSummary(unit) {
+  const ids = activeSpNodeIds(unit);
+  const budget = spBudget(unit);
+  if (ids.length === 0) return `未割当 (SP ${budget})`;
+  const names = ids.map((id) => SP_NODES[id].label).join("・");
+  return `${names} (${spSpent(unit)}/${budget})`;
+}
+
+function openSpView(unitId) {
+  state.spUnitId = unitId;
+  showView("spView");
+}
+
+function toggleSpNode(unitId, nodeId) {
+  const unit = state.roster.find((entry) => entry.id === unitId);
+  const node = SP_NODES[nodeId];
+  if (!unit || !node) return;
+  if (!Array.isArray(unit.spNodes)) unit.spNodes = [];
+  const idx = unit.spNodes.indexOf(nodeId);
+  if (idx >= 0) {
+    unit.spNodes.splice(idx, 1); // 解除
+  } else if (spSpent(unit) + node.cost <= spBudget(unit)) {
+    unit.spNodes.push(nodeId); // 予算内なら習得
+  } else {
+    if (els.saveStatus) els.saveStatus.textContent = "SPが不足しています";
+    return; // 予算超過は無視
+  }
+  saveGame();
+  renderSpPanel();
+}
+
+function resetSpNodes(unitId) {
+  const unit = state.roster.find((entry) => entry.id === unitId);
+  if (!unit) return;
+  unit.spNodes = [];
+  saveGame();
+  renderSpPanel();
+}
+
+function renderSpPanel() {
+  const unit = state.roster.find((entry) => entry.id === state.spUnitId);
+  if (!unit || !els.spPanel) return;
+  if (!Array.isArray(unit.spNodes)) unit.spNodes = [];
+  const budget = spBudget(unit);
+  const spent = spSpent(unit);
+  if (els.spTitle) els.spTitle.textContent = `${unit.name} のビルド`;
+
+  const branches = Object.entries(SP_BRANCHES)
+    .map(([branchId, branchName]) => {
+      const nodes = Object.entries(SP_NODES)
+        .filter(([, def]) => def.branch === branchId)
+        .map(([id, def]) => {
+          const active = unit.spNodes.includes(id);
+          const affordable = active || spent + def.cost <= budget;
+          return `
+            <button type="button" class="sp-node ${active ? "is-active" : ""}" data-sp-toggle="${id}" ${affordable ? "" : "disabled"}>
+              <span class="sp-node__head"><b>${def.label}</b><span class="sp-node__cost">SP${def.cost}</span></span>
+              <span class="sp-node__eff">${sphereEffectText(def)}</span>
+            </button>`;
+        })
+        .join("");
+      return `<div class="sp-branch"><span class="sp-branch__title sp-branch--${branchId}">${branchName}</span><div class="sp-branch__nodes">${nodes}</div></div>`;
+    })
+    .join("");
+
+  els.spPanel.innerHTML = `
+    <div class="sp-head">
+      <div class="sp-budget"><span>SP</span><strong>${budget - spent}</strong><small>/ ${budget} 残</small></div>
+      <button type="button" class="sp-reset" data-sp-reset="${unit.id}">リセット</button>
+    </div>
+    <p class="sp-hint">全ノードは取れません。爆発 / 連携 / 守勢 のどれに寄せるか＝あなたのビルド。無料でやり直せます。</p>
+    ${branches}
+  `;
+
+  els.spPanel.querySelectorAll("[data-sp-toggle]").forEach((button) => {
+    button.addEventListener("click", () => toggleSpNode(unit.id, button.dataset.spToggle));
+  });
+  const reset = els.spPanel.querySelector("[data-sp-reset]");
+  if (reset) reset.addEventListener("click", () => resetSpNodes(unit.id));
 }
 
 function trainUnit(unitId) {
@@ -1584,11 +1725,11 @@ function unitRelics(unit) {
 }
 
 function relicProduct(unit, key) {
-  return unitRelics(unit).reduce((value, relic) => value * (relic[key] || 1), 1);
+  return unitEffects(unit).reduce((value, eff) => value * (eff[key] || 1), 1);
 }
 
 function relicSum(unit, key) {
-  return unitRelics(unit).reduce((value, relic) => value + (relic[key] || 0), 0);
+  return unitEffects(unit).reduce((value, eff) => value + (eff[key] || 0), 0);
 }
 
 // Brave Frontier 構造のダメージ式:
