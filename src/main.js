@@ -885,6 +885,7 @@ const els = {
   guardButton: document.querySelector("#guardButton"),
   autoButton: document.querySelector("#autoButton"),
   overdriveBar: document.querySelector("#overdriveBar"),
+  xbbSlot: document.querySelector("#xbbSlot"),
   itemButtons: document.querySelectorAll("[data-item]"),
   waveLabel: document.querySelector("#waveLabel"),
   navButtons: document.querySelectorAll("[data-view-target]"),
@@ -1053,10 +1054,14 @@ function showView(viewId) {
   els.views.forEach((view) => {
     view.hidden = view.id !== viewId;
   });
-  els.navButtons.forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.viewTarget === viewId);
-  });
   document.body.classList.toggle("in-battle", viewId === "battleView");
+  // スマホ的な画面遷移アニメを毎回再生
+  const shown = document.getElementById(viewId);
+  if (shown) {
+    shown.classList.remove("view-anim");
+    void shown.offsetWidth;
+    shown.classList.add("view-anim");
+  }
   if (viewId === "homeView") renderHome();
   if (viewId === "questView") renderQuestUnlocks();
   if (viewId === "unitsView") renderUnitList();
@@ -2559,15 +2564,16 @@ function renderParty() {
   const totalBurst = state.party.reduce((sum, unit) => sum + Math.min(unit.burst, 100), 0);
   const xbbPercent = Math.floor((totalBurst / Math.max(1, state.party.length * 100)) * 100);
 
-  const xbbGauge = document.createElement("div");
+  els.xbbSlot.innerHTML = "";
+  const xbbGauge = document.createElement("button");
+  xbbGauge.type = "button";
   const readyXbb = findReadyXbb();
   const xbbReady = Boolean(readyXbb);
-  xbbGauge.className = `xbb-gauge ${xbbReady ? "is-ready" : ""}`;
+  xbbGauge.className = `xbb-bar ${xbbReady ? "is-ready" : ""}`;
+  xbbGauge.disabled = !xbbReady || state.phase !== "player";
   xbbGauge.innerHTML = `
-    <div class="xbb-gauge__crystal">
-      <div class="xbb-gauge__fill" style="height: ${xbbPercent}%"></div>
-    </div>
-    <div class="xbb-gauge__label">${xbbReady ? readyXbb.name : `XBB ${xbbPercent}%`}</div>
+    <span class="xbb-bar__fill" style="width: ${Math.min(100, xbbPercent)}%"></span>
+    <span class="xbb-bar__label">${xbbReady ? "⚡ " + readyXbb.name : `連携 ${xbbPercent}%`}</span>
   `;
   xbbGauge.title = xbbReady ? `${readyXbb.name} 発動可能` : "連携相手のBBゲージを満たすとXBBが発動できます";
   xbbGauge.addEventListener("click", () => {
@@ -2612,15 +2618,12 @@ function renderParty() {
       resolvePlayerActions();
     }
   });
-  els.partyGrid.appendChild(xbbGauge);
+  els.xbbSlot.appendChild(xbbGauge);
 
   state.party.forEach((unit, index) => {
-    const isRight = index % 2 === 1;
     const button = document.createElement("button");
-    button.className = `unit-card ${isRight ? "unit-card--right" : "unit-card--left"}`;
+    button.className = "unit-card";
     button.type = "button";
-    button.style.gridColumn = isRight ? "3" : "1";
-    button.style.gridRow = `${Math.floor(index / 2) + 1}`;
     button.disabled = state.phase !== "player" || !unit.ready || unit.hp <= 0;
     if (unit.ready && unit.hp > 0) {
       if (unit.burst >= 200) button.classList.add("is-ready-burst", "is-sbb-ready");

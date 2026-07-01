@@ -9,18 +9,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="icon" href="data:," />
     <title>召喚継界クロスバースト</title>
-    <link rel="stylesheet" href="src/styles.css?v=20260701o" />
+    <link rel="stylesheet" href="src/styles.css?v=20260701q" />
   </head>
   <body>
     <main class="app-shell">
-      <nav class="app-nav" aria-label="メインナビゲーション">
-        <button type="button" data-view-target="homeView">拠点</button>
-        <button type="button" data-view-target="questView">冒険</button>
-        <button type="button" data-view-target="unitsView">部隊</button>
-        <button type="button" data-view-target="powerView">強化</button>
-        <button type="button" data-view-target="exchangeView">召喚</button>
-      </nav>
-
       <section id="homeView" class="app-view home-view">
         <div class="home-hero">
           <p class="eyebrow">継界・召喚院本部</p>
@@ -36,16 +28,20 @@
           </div>
         </div>
         <div class="home-actions">
-          <button type="button" class="home-command" data-view-target="questView">冒険へ</button>
-          <button type="button" class="home-command" data-view-target="unitsView">部隊編成</button>
-          <button type="button" class="home-command" data-view-target="powerView">ユニット強化</button>
+          <button type="button" class="home-command home-command--primary" data-view-target="questView"><span class="home-command__k">冒険</span><small>継界へ出撃</small></button>
+          <button type="button" class="home-command" data-view-target="unitsView"><span class="home-command__k">部隊</span><small>編成</small></button>
+          <button type="button" class="home-command" data-view-target="powerView"><span class="home-command__k">強化</span><small>訓練・進化</small></button>
+          <button type="button" class="home-command" data-view-target="exchangeView"><span class="home-command__k">召喚</span><small>素材と契約</small></button>
         </div>
       </section>
 
       <section id="questView" class="app-view menu-view" hidden>
         <div class="menu-header">
-          <p class="eyebrow">継界図</p>
-          <h2>崩れた神殿</h2>
+          <button type="button" class="back-button" data-view-target="homeView" aria-label="拠点へ戻る">‹ 拠点</button>
+          <div class="menu-header__text">
+            <p class="eyebrow">継界図</p>
+            <h2>崩れた神殿</h2>
+          </div>
         </div>
         <div class="quest-card">
           <div>
@@ -68,24 +64,33 @@
 
       <section id="unitsView" class="app-view menu-view" hidden>
         <div class="menu-header">
-          <p class="eyebrow">部隊編成</p>
-          <h2>出撃メンバー</h2>
+          <button type="button" class="back-button" data-view-target="homeView" aria-label="拠点へ戻る">‹ 拠点</button>
+          <div class="menu-header__text">
+            <p class="eyebrow">部隊編成</p>
+            <h2>出撃メンバー</h2>
+          </div>
         </div>
         <div id="unitList" class="unit-list"></div>
       </section>
 
       <section id="powerView" class="app-view menu-view" hidden>
         <div class="menu-header">
-          <p class="eyebrow">ユニット強化</p>
-          <h2>訓練とレリック</h2>
+          <button type="button" class="back-button" data-view-target="homeView" aria-label="拠点へ戻る">‹ 拠点</button>
+          <div class="menu-header__text">
+            <p class="eyebrow">ユニット強化</p>
+            <h2>訓練とレリック</h2>
+          </div>
         </div>
         <div id="powerList" class="unit-list"></div>
       </section>
 
       <section id="exchangeView" class="app-view menu-view" hidden>
         <div class="menu-header">
-          <p class="eyebrow">召喚契約</p>
-          <h2>素材と契約</h2>
+          <button type="button" class="back-button" data-view-target="homeView" aria-label="拠点へ戻る">‹ 拠点</button>
+          <div class="menu-header__text">
+            <p class="eyebrow">召喚契約</p>
+            <h2>素材と契約</h2>
+          </div>
         </div>
         <div id="materialWallet" class="material-wallet"></div>
         <div id="exchangeList" class="unit-list"></div>
@@ -164,10 +169,13 @@
       </section>
 
       <section class="party-panel" aria-label="部隊コマンド">
-        <button id="overdriveBar" class="overdrive" type="button" disabled>
-          <span class="overdrive__fill"></span>
-          <span class="overdrive__label">オーバードライブ 0%</span>
-        </button>
+        <div class="battle-gauges">
+          <button id="overdriveBar" class="overdrive" type="button" disabled>
+            <span class="overdrive__fill"></span>
+            <span class="overdrive__label">オーバードライブ 0%</span>
+          </button>
+          <div id="xbbSlot" class="xbb-slot"></div>
+        </div>
         <div id="partyGrid" class="party-grid"></div>
         <div class="item-row" aria-label="アイテム">
           <button type="button" class="item-slot" data-item="cure">回復薬 <span>x10</span></button>
@@ -195,7 +203,7 @@
       </section>
     </main>
 
-    <script src="src/combat_config.js?v=20260701o"></script>
-    <script src="src/main.js?v=20260701o"></script>
+    <script src="src/combat_config.js?v=20260701q"></script>
+    <script src="src/main.js?v=20260701q"></script>
   </body>
 </html>

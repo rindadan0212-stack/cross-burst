@@ -213,19 +213,115 @@ body.in-battle .battlefield {
 .home-actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
+  margin-top: 2px;
 }
 
 .home-command {
-  min-height: 58px;
+  min-height: 74px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 3px solid;
+  border-image: linear-gradient(160deg, var(--gold-lt), var(--gold) 30%, var(--gold-dk) 70%, var(--gold-edge)) 1;
+  background: linear-gradient(180deg, #3a2c18, #1f1710 92%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 231, 160, 0.18),
+    0 4px 0 rgba(0, 0, 0, 0.42);
+  color: var(--gold-lt);
+}
+
+.home-command__k {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.home-command small {
+  color: var(--parch);
+  font-size: 0.62rem;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.home-command--primary {
+  grid-column: 1 / -1;
+  min-height: 88px;
+  background:
+    linear-gradient(180deg, rgba(216, 170, 74, 0.18), transparent 40%),
+    linear-gradient(180deg, #4a3418, #241a0e 92%);
+}
+
+.home-command--primary .home-command__k {
+  font-size: 1.7rem;
+  color: #fff2c8;
+  text-shadow: 0 0 16px rgba(216, 170, 74, 0.45);
 }
 
 .menu-view {
   padding: 12px;
 }
 
+.menu-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.menu-header__text {
+  min-width: 0;
+}
+
 .menu-header h2 {
-  margin: 0 0 10px;
+  margin: 2px 0 0;
+}
+
+.back-button {
+  flex: none;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 2px solid var(--gold-edge);
+  border-radius: 9px;
+  color: var(--gold-lt);
+  background: linear-gradient(180deg, #3a2c18, #201810);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 231, 160, 0.2),
+    0 3px 0 rgba(0, 0, 0, 0.42);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.back-button:active {
+  transform: translateY(2px);
+  box-shadow: inset 0 0 0 1px rgba(255, 231, 160, 0.2);
+}
+
+/* 画面遷移アニメ (スマホゲーム的な切替) */
+.app-view.view-anim {
+  animation: viewSlideIn 240ms ease;
+}
+
+@keyframes viewSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-view.view-anim {
+    animation: none;
+  }
 }
 
 .quest-card {
@@ -1178,12 +1274,75 @@ h1 {
   50% { box-shadow: 0 0 22px rgba(255, 226, 122, 0.95); }
 }
 
+/* ブレフロ準拠: 6ユニットを 2行×3列 のコマンドグリッドに */
 .party-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr);
-  grid-template-rows: repeat(3, 74px);
-  gap: 6px 7px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, 1fr);
+  gap: 6px;
   align-items: stretch;
+}
+
+/* OD / 連携(XBB) のゲージ行 */
+.battle-gauges {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.battle-gauges .overdrive {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.xbb-slot {
+  flex: 1;
+  display: flex;
+}
+
+.xbb-bar {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 22px;
+  padding: 0;
+  border: 1px solid rgba(140, 210, 255, 0.42);
+  border-radius: 6px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(28, 40, 60, 0.92), rgba(12, 16, 24, 0.92));
+  color: #cfe7ff;
+  font-weight: 900;
+  font-size: 0.6rem;
+  cursor: default;
+}
+
+.xbb-bar__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: linear-gradient(90deg, #2a6ea8, #63c8ff);
+  transition: width 180ms ease;
+}
+
+.xbb-bar__label {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  height: 100%;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+}
+
+.xbb-bar.is-ready {
+  cursor: pointer;
+  border-color: #8fe0ff;
+  color: #06222e;
+  animation: xbbReady 0.9s ease-in-out infinite;
+}
+
+.xbb-bar.is-ready .xbb-bar__fill {
+  background: linear-gradient(90deg, #63c8ff, #dff4ff, #63c8ff);
 }
 
 .unit-card {
@@ -1740,22 +1899,27 @@ h1 {
   }
 
   .party-grid {
-    grid-template-columns: minmax(0, 1fr) 46px minmax(0, 1fr);
-    grid-template-rows: repeat(3, 64px);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(2, 1fr);
     gap: 5px;
   }
 
   .unit-card {
-    min-height: 60px;
-    padding: 5px 7px;
-  }
-
-  .unit-card--right {
-    padding: 5px 7px;
+    min-height: 62px;
+    padding: 5px;
+    gap: 5px;
   }
 
   .unit-card__name {
-    font-size: 0.74rem;
+    font-size: 0.66rem;
+  }
+
+  .unit-card__hp {
+    font-size: 0.52rem;
+  }
+
+  .unit-card__line--sub {
+    font-size: 0.5rem;
   }
 
   .skill-strip span {
@@ -1763,13 +1927,8 @@ h1 {
   }
 
   .unit-card__portrait {
-    width: 30px;
-    height: 44px;
-  }
-
-  .xbb-gauge__crystal {
-    width: 36px;
-    height: 202px;
+    width: 26px;
+    height: 40px;
   }
 
   .item-row {
