@@ -2416,7 +2416,7 @@ function renderOverdrive() {
   const fill = els.overdriveBar.querySelector(".overdrive__fill");
   const label = els.overdriveBar.querySelector(".overdrive__label");
   if (fill) fill.style.width = `${pct}%`;
-  if (label) label.textContent = ready ? "⚡ アルティメットバースト 発動可" : `オーバードライブ ${Math.floor(pct)}%`;
+  if (label) label.textContent = ready ? "⚡ OVERDRIVE 発動可 (UBB)" : `OVERDRIVE ${Math.floor(pct)}%`;
 }
 
 // Ultimate Brave Burst: ODゲージ満タンで全軍が一斉に究極攻撃。
@@ -2631,23 +2631,22 @@ function renderParty() {
     }
     wireUnitGesture(button, unit.id);
 
+    const dead = unit.hp <= 0;
     const hpPct = Math.max(0, (unit.hp / unit.maxHp) * 100);
     const bbPct = Math.min(100, unit.burst);
-    const bbTag = unit.burst >= 200 ? "SBB→" : unit.burst >= 100 ? "BB↑" : "";
+    const burstLabel = unit.burst >= 200 ? "スーパーBB" : "ブレイブバースト";
+    const burstReadyCls = unit.burst >= 200 ? "is-sbb" : unit.burst >= 100 ? "is-bb" : "";
+    // ブレフロ準拠の大型パネル: ポートレート | 名前 / HP数値+バー / BBラベル + BBゲージ
     button.innerHTML = `
       <span class="unit-card__portrait element--${unit.element}">${ELEMENT_LABELS[unit.element]}</span>
       <div class="unit-card__body">
-        <div class="unit-card__line">
-          <span class="unit-card__name">${unit.name}</span>
-          <span class="unit-card__hp">${unit.hp}/${unit.maxHp}</span>
-        </div>
+        <div class="unit-card__name">${unit.name}</div>
+        <div class="unit-card__hp"><b>HP</b> ${Math.max(0, unit.hp)}/${unit.maxHp}</div>
         <div class="bar bar--hp"><span style="width:${hpPct}%"></span></div>
-        <div class="unit-card__line unit-card__line--sub">
-          <span class="unit-card__lv">Lv${unit.level} ${unitTypeMod(unit).label}</span>
-          ${bbTag ? `<span class="unit-card__bbtag">${bbTag}!</span>` : `<span class="unit-card__bbpct">BB ${Math.floor(bbPct)}%</span>`}
-        </div>
+        <div class="unit-card__burstlabel ${burstReadyCls}">${burstLabel}</div>
         <div class="bar bar--burst"><span style="width:${bbPct}%"></span></div>
       </div>
+      ${dead ? '<span class="unit-card__dead">Dead</span>' : ""}
     `;
 
     els.partyGrid.appendChild(button);
