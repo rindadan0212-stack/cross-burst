@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="icon" href="data:," />
     <title>召喚継界クロスバースト</title>
-    <link rel="stylesheet" href="src/styles.css?v=20260701x" />
+    <link rel="stylesheet" href="src/styles.css?v=20260701y" />
   </head>
   <body>
     <main class="app-shell">
@@ -115,7 +115,7 @@
           <span id="friendSkillLabel">助っ人: -</span>
         </div>
         <div class="topbar-actions">
-          <button id="guardButton" class="chrome-button" type="button" title="全員防御">防御</button>
+          <button id="autoButton" class="chrome-button chrome-button--auto" type="button" title="オート戦闘">自動</button>
           <button id="speedButton" class="icon-button" type="button" title="速度切替">1x</button>
           <button id="restartButton" class="icon-button" type="button" title="戦闘をやり直す">↻</button>
         </div>
@@ -126,7 +126,6 @@
           <div class="quest-strip">
             <span id="areaLabel">AREA 1-4</span>
             <strong id="waveLabel">第1戦/3</strong>
-            <button id="autoButton" type="button">自動</button>
           </div>
           <div class="enemy-hud__name">
             <span id="enemyElement" class="element element--shade">影</span>
@@ -184,6 +183,7 @@
       <section class="party-panel" aria-label="部隊コマンド">
         <div id="partyGrid" class="party-grid"></div>
         <div class="battle-gauges">
+          <button id="guardButton" class="command-guard" type="button" title="全員防御">防御</button>
           <button id="overdriveBar" class="overdrive" type="button" disabled>
             <span class="overdrive__fill"></span>
             <span class="overdrive__label">OVERDRIVE 0%</span>
@@ -216,7 +216,7 @@
       </section>
     </main>
 
-    <script src="src/combat_config.js?v=20260701x"></script>
-    <script src="src/main.js?v=20260701x"></script>
+    <script src="src/combat_config.js?v=20260701y"></script>
+    <script src="src/main.js?v=20260701y"></script>
   </body>
 </html>
